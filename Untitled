@@ -1,0 +1,8 @@
+(.venv) ueharamasahironoMacBook-Air:local_agent masahiro$ ./start.sh
+[OK] Ollamaサーバー 起動中
+[OK] モデル: phi4-mini:latest
+[OK] 接続先: http://localhost:11434
+
+▗ ▗   ▖ ▖  Claude Code v2.1.87
+           phi4-mini:latest · Claude Pro
+  ▘▘ ▝▝    ~/projects/local_agent
