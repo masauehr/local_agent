@@ -135,6 +135,29 @@ ollama serve
 export ANTHROPIC_BASE_URL=http://localhost:11434/v1
 ```
 
+## スキル（Skills）機能
+
+ローカルLLMの回答品質をタスク特化の「教科書」で引き上げる仕組み。
+
+```bash
+# スキルを指定して起動
+python scripts/agent.py --skill tech_writing_ja
+
+# 利用可能なスキル一覧
+python scripts/agent.py --list-skills
+
+# スキルあり・なしの比較実験
+python examples/compare_skills.py qwen2.5:7b tech_writing_ja "量子コンピュータを説明して"
+```
+
+| スキルファイル | 用途 |
+|---|---|
+| `skills/tech_writing_ja.md` | 技術文書の分かりやすい解説 |
+| `skills/code_review.md` | コードレビュー |
+| `skills/template.md` | 新規スキル作成テンプレート |
+
+詳しくは `skills/README.md` を参照。
+
 ## 参考リンク
 
 - [Ollama公式ドキュメント](https://docs.ollama.com/)

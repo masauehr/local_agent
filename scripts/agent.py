@@ -1,8 +1,15 @@
 """
 agent.py — ローカルLLMを使ったインタラクティブAIエージェント
 会話履歴を保持しながら対話する。Ctrl+C または 'exit' で終了。
+
+使い方:
+    python agent.py [--skill スキル名] [--list-skills]
+例:
+    python agent.py --skill tech_writing_ja
+    python agent.py --list-skills
 """
 
+import argparse
 import os
 import sys
 import json
@@ -12,7 +19,7 @@ from openai import OpenAI
 # 設定（環境変数で上書き可能）
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
-SYSTEM_PROMPT = os.environ.get(
+DEFAULT_SYSTEM_PROMPT = os.environ.get(
     "AGENT_SYSTEM_PROMPT",
     "あなたは優秀なプログラミングアシスタントです。日本語で丁寧に回答してください。"
     "コードを示すときは説明も添えてください。",
@@ -120,13 +127,38 @@ def run_turn(client: OpenAI, messages: list) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="ローカルLLMエージェント")
+    parser.add_argument("--skill", help="読み込むスキル名（skills/配下の.mdファイル名）")
+    parser.add_argument("--list-skills", action="store_true", help="利用可能なスキル一覧を表示して終了")
+    args = parser.parse_args()
+
+    # --list-skills
+    if args.list_skills:
+        from skill_loader import list_skills
+        skills = list_skills()
+        print("利用可能なスキル:", skills if skills else "（なし）")
+        sys.exit(0)
+
+    # スキル読み込み（--skill フラグ → 環境変数 → デフォルト の順で優先）
+    skill_name = args.skill or os.environ.get("AGENT_SKILL")
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+    if skill_name:
+        try:
+            from skill_loader import load_skill
+            system_prompt = load_skill(skill_name)
+            print(f"\033[35m[スキル]\033[0m '{skill_name}' を読み込みました")
+        except FileNotFoundError as e:
+            print(f"\033[31m[警告]\033[0m {e}")
+            print("デフォルトのシステムプロンプトで続行します")
+
     print(f"\033[36m=== local_agent ===\033[0m")
     print(f"モデル : {MODEL}")
     print(f"接続先 : {OLLAMA_BASE_URL}")
+    print(f"スキル : {skill_name or 'なし（デフォルト）'}")
     print("'exit' または Ctrl+C で終了\n")
 
     client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt}]
 
     while True:
         try:
