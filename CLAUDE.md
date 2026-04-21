@@ -2,16 +2,17 @@
 
 ## プロジェクト概要
 
-ローカルLLM（Ollama）を使ったAIエージェント環境の構築・実験プロジェクト。
-OllamaのAnthropic互換APIを通じて、APIコストゼロでAIエージェントを動かす。
+ローカルLLM（Ollama / llama.cpp）に**スキル**（タスク特化のMarkdownファイル）を与えて、回答品質・フォーマット・言語制御を向上させる仕組みを実験・改善するプロジェクト。
+
+あわせて、ファイル操作・git操作を自然言語で実行できるツール呼び出し機能も実装・実験している。
 
 ## 技術スタック
 
-- **ローカルLLMサーバー**: Ollama v0.15以降
-- **主要モデル**: qwen2.5-coder:7b（デフォルト）
+- **ローカルLLMサーバー**: Ollama v0.15以降 または llama-server（llama.cpp）
+- **推奨モデル**: `gemma4:e2b`（Ollama・ツール呼び出し安定）/ `Bonsai-8B`（llama-server・1.1GB超軽量）
 - **言語**: Python 3.10以上
-- **APIクライアント**: `openai` パッケージ（OpenAI互換）または `httpx`（直接呼び出し）
-- **接続先**: `http://localhost:11434`
+- **APIクライアント**: `openai` パッケージ（OpenAI互換）
+- **接続先**: Ollama `http://localhost:11434` / llama-server `http://localhost:8080`
 
 ## ディレクトリ構成方針
 

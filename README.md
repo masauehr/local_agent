@@ -1,165 +1,138 @@
 # local_agent
 
-ローカルLLM（Ollama）を使ったAIエージェント環境。MacでClaude Code風のCLI体験をAPIコストゼロで実現する。
+ローカルLLM（Ollama / llama.cpp）にスキルを与えて、タスク特化型AIエージェントを構築・実験するプロジェクト。
 
-## 概要
+## プロジェクトの目的
 
-- **目的**: OllamaのAnthropic互換APIを通じてローカルLLMをエージェントとして動かす
-- **対象モデル**: `qwen2.5-coder:7b`（コード生成向き、4.7GB）など
-- **推奨環境**: Mac (Apple Silicon)、メモリ16GB以上
+**スキル**（タスク特化のMarkdownファイル）をシステムプロンプトとして渡すことで、ローカルLLMの回答品質・フォーマット・言語制御を向上させる仕組みを実験・改善する。
+
+あわせて、ファイル操作・git操作を自然言語で実行できるエージェント機能も実装済み。
 
 ## ディレクトリ構成
 
 ```
 local_agent/
-├── README.md           # このファイル
-├── CLAUDE.md           # Claude Code向け指示
-├── plan.md             # 初期構想メモ
-├── setup/              # セットアップスクリプト
-├── scripts/            # エージェント実行スクリプト
-└── examples/           # 使用例・動作確認用コード
+├── scripts/
+│   ├── agent.py            # インタラクティブエージェント（ツール呼び出し対応）
+│   └── skill_loader.py     # スキルファイル読み込みユーティリティ
+├── skills/                 # スキルファイル（LLMへの専門指示書）
+│   ├── tech_writing_ja.md  # 技術文書作成スキル
+│   ├── code_review.md      # コードレビュースキル
+│   ├── debug_helper.md     # デバッグ支援スキル
+│   ├── commit_message.md   # コミットメッセージ生成スキル
+│   ├── regex_explainer.md  # 正規表現解説・生成スキル
+│   ├── template.md         # 新規スキル作成テンプレート
+│   └── README.md           # スキルの書き方ガイド
+├── examples/
+│   ├── basic_chat.py       # 基本チャットサンプル
+│   └── compare_skills.py   # スキルあり・なしの回答を比較する実験スクリプト
+├── setup/
+│   └── install.sh          # 初回セットアップ
+└── CLAUDE.md               # このプロジェクトへの指示
 ```
 
-## 前提条件
-
-| 要件 | 詳細 |
-|------|------|
-| OS | macOS (Apple Silicon推奨) |
-| メモリ | 16GB以上（7Bモデル）、32GB以上（14B以上のモデル） |
-| Ollama | v0.15以降（Anthropic互換API対応） |
-| Python | 3.10以上（スクリプト実行用） |
-
-## セットアップ手順
-
-### 1. Ollamaのインストール
+## クイックスタート
 
 ```bash
-# Homebrewでインストール
-brew install ollama
+cd ~/projects/local_agent
+source .venv/bin/activate
 
-# またはpkg形式でインストール
-# https://ollama.com/download/mac からダウンロード
+# デフォルト（gemma4:e2b + スキルなし）
+python3 scripts/agent.py
+
+# スキルを指定して起動
+python3 scripts/agent.py --skill tech_writing_ja
+
+# 利用可能なスキル一覧を確認
+python3 scripts/agent.py --list-skills
 ```
 
-### 2. Ollamaサーバー起動
+## スキル機能
+
+スキルとは**LLMへの専門指示書**。システムプロンプトとして渡すことで以下が向上する：
+- 回答のフォーマット・構造化
+- 言語制御（中国語漏れの防止等）
+- 過剰な回答の抑制
+
+### スキル一覧
+
+| スキル名 | 用途 |
+|---------|------|
+| `tech_writing_ja` | 技術文書を「一言・詳細・具体例・注意点」の構造で出力 |
+| `code_review` | 「重大な問題→改善提案→良い点→修正コード」の形式でレビュー |
+| `debug_helper` | エラーから「種類→原因→修正方法→確認手順」を提示 |
+| `commit_message` | diffから `feat/fix/refactor` 等のprefixつきメッセージを生成 |
+| `regex_explainer` | 正規表現を解説・生成・デバッグ。パーツ表・マッチ例つき |
+
+### スキルあり・なしの比較実験
 
 ```bash
-ollama serve
+python3 examples/compare_skills.py <モデル名> <スキル名> "<質問>"
+
+# 例
+python3 examples/compare_skills.py gemma4:e2b tech_writing_ja "DNSとは何ですか"
+python3 examples/compare_skills.py gemma4:e2b code_review "以下をレビューして: def f(x): return eval(x)"
 ```
 
-### 3. モデルのダウンロード
+### 新しいスキルの作り方
 
 ```bash
-# コード生成向け（推奨・4.7GB）
-ollama pull qwen2.5-coder:7b
-
-# より高精度（要高スペック・9GB）
-ollama pull qwen2.5-coder:14b
-
-# 汎用（日本語対応）
-ollama pull qwen2.5:7b
+cp skills/template.md skills/<新しいスキル名>.md
+# テンプレートを編集してタスク固有の指示を記述
 ```
 
-### 4. Claude Codeでの使用（オプション）
+## ツール呼び出し機能
+
+エージェントに自然言語で話しかけると、対応するツールが自動で呼び出される。
+
+| ツール | できること |
+|--------|-----------|
+| `list_files` | ディレクトリ一覧の取得 |
+| `read_file` | テキストファイルの読み込み |
+| `write_file` | ファイルの作成・上書き |
+| `calculate` | 数式計算 |
+| `run_git` | git操作（status/add/commit/push/diff/log/show） |
+
+```
+[あなた] このディレクトリのファイル一覧を見せて
+[あなた] test3.txtを作成してtestと書いて
+[あなた] git add . してfeat: テスト でコミットして
+[あなた] pushして
+```
+
+## 対応モデル・バックエンド
+
+| モデル | バックエンド | ツール呼び出し | 日本語品質 |
+|--------|------------|--------------|-----------|
+| `gemma4:e2b`（5.1GB） | Ollama | ◎ 安定・**推奨** | ◎ |
+| `qwen2.5:7b`（4.7GB） | Ollama | △ 不安定 | △ 中国語漏れあり |
+| `Bonsai-8B`（1.1GB） | llama-server | ○ 単発OK・連鎖は不安定 | ○ |
+
+### Ollamaで起動する場合
 
 ```bash
-# 環境変数を設定してローカルLLMに向ける
-export ANTHROPIC_BASE_URL=http://localhost:11434
-export ANTHROPIC_API_KEY=ollama  # 形式上必要なダミー値
-
-# Claude Codeを起動
-claude --model qwen2.5-coder:7b
-```
-
-### 5. Python経由での使用
-
-```bash
-pip install openai  # OllamaはOpenAI互換APIも提供
-```
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:11434/v1",
-    api_key="ollama",  # ダミー値
-)
-
-response = client.chat.completions.create(
-    model="qwen2.5-coder:7b",
-    messages=[{"role": "user", "content": "Hello"}],
-)
-print(response.choices[0].message.content)
-```
-
-## モデル比較
-
-| モデル | サイズ | 特徴 | 推奨用途 |
-|--------|--------|------|---------|
-| qwen2.5-coder:7b | 4.7GB | コード特化・速い | 日常的なコード生成 |
-| qwen2.5-coder:14b | 9GB | 高精度・やや遅い | 複雑なコードタスク |
-| qwen2.5:7b | 4.7GB | 汎用・日本語対応 | 対話・文章生成 |
-| llama3.1:8b | 4.9GB | 汎用 | 一般タスク |
-
-## 動作確認
-
-```bash
-# Ollamaが起動しているか確認
-curl http://localhost:11434/api/tags
-
-# モデル一覧を確認
+# Ollamaサーバーが起動していること
 ollama list
 
-# 簡単なテスト
-ollama run qwen2.5-coder:7b "Pythonでフィボナッチ数列を出力する関数を書いて"
+# モデルを指定して起動
+OLLAMA_MODEL=gemma4:e2b python3 scripts/agent.py
 ```
 
-## トラブルシュート
-
-### ツール非対応エラーが出る
-→ `qwen2.5-coder` 系モデルに変更する。ツール呼び出しに対応している。
-
-### 生成が遅い・不安定
-→ メモリ不足の可能性。`Activity Monitor`でメモリ圧迫を確認。7Bモデルでも16GB推奨。
-
-### `ollama serve` が既に起動中というエラー
-```bash
-# プロセスを確認して停止
-pkill ollama
-ollama serve
-```
-
-### Claude Codeがローカルに接続できない
-→ `ANTHROPIC_BASE_URL` に `/v1` を付けた形式を試す:
-```bash
-export ANTHROPIC_BASE_URL=http://localhost:11434/v1
-```
-
-## スキル（Skills）機能
-
-ローカルLLMの回答品質をタスク特化の「教科書」で引き上げる仕組み。
+### Bonsai（llama-server）で起動する場合
 
 ```bash
-# スキルを指定して起動
-python scripts/agent.py --skill tech_writing_ja
+# llama-serverを起動
+cd ~/projects/1bit_LLM/bonsai-demo
+./scripts/start_llama_server.sh &
 
-# 利用可能なスキル一覧
-python scripts/agent.py --list-skills
-
-# スキルあり・なしの比較実験
-python examples/compare_skills.py qwen2.5:7b tech_writing_ja "量子コンピュータを説明して"
+# agent.pyをBonsaiに向ける
+cd ~/projects/local_agent
+OLLAMA_BASE_URL=http://localhost:8080/v1 OLLAMA_MODEL=bonsai-8b python3 scripts/agent.py
 ```
 
-| スキルファイル | 用途 |
-|---|---|
-| `skills/tech_writing_ja.md` | 技術文書の分かりやすい解説 |
-| `skills/code_review.md` | コードレビュー |
-| `skills/template.md` | 新規スキル作成テンプレート |
+## デバッグ
 
-詳しくは `skills/README.md` を参照。
-
-## 参考リンク
-
-- [Ollama公式ドキュメント](https://docs.ollama.com/)
-- [Ollama × Claude Code 統合ガイド](https://docs.ollama.com/integrations/claude-code)
-- [Zenn: ローカルLLMでClaude Codeを動かす](https://zenn.dev/urakawa_jinsei/articles/2b707394d6c216)
+```bash
+# ツール呼び出しの生出力を確認
+AGENT_DEBUG=1 python3 scripts/agent.py
+```
