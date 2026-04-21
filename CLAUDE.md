@@ -97,21 +97,30 @@ local_agent/
     └── compare_skills.py  # スキルあり・なしの回答を並べて比較する実験スクリプト
 ```
 
-### 次にやること（続きから始める手順）
-1. Ollama の起動確認とモデル確認
-   ```bash
-   ollama list
-   ```
-2. 比較実験を実行してスキルの効果を確認
-   ```bash
-   source .venv/bin/activate
-   python3 examples/compare_skills.py <モデル名> tech_writing_ja "DNSとは何ですか"
-   ```
-3. 結果を見て、スキルファイルの内容を改善する（`skills/` 配下を編集）
-4. 新しいタスク向けのスキルを `skills/template.md` を元に作成する
+### 実験結果サマリー（2026-04-21）
 
-### スキルファイルの仮想環境
-Python の依存パッケージは `.venv/` に入っている。  
+- スキルによってフォーマット・構造化・中国語漏れ抑制の効果を確認
+- `gemma4:e2b` がツール呼び出し・日本語品質ともに最も安定 → **デフォルトモデルに設定済み**
+- `qwen2.5:7b` はシステムプロンプトで言語ルールを明示しないと中国語が混入する
+- `agent.py` に `write_file` / `list_files` / `run_git` ツールを追加済み
+- `<tool_call>` テキスト形式フォールバックパーサーを実装済み（モデル非依存）
+
+### 次にやること
+- 新しいスキルを作って試す（`skills/template.md` を元に）
+- エージェントにチャット内容をマニュアルとして保存させる（`write_file` + `commit_message` スキルを組み合わせ）
+- 他のモデル（`deepseek-coder:1.3b` 等）でツール呼び出し精度を比較
+
+### 起動コマンド
 ```bash
+cd ~/projects/local_agent
 source .venv/bin/activate
+
+# デフォルト（gemma4:e2b）
+python3 scripts/agent.py
+
+# スキルあり
+python3 scripts/agent.py --skill tech_writing_ja
+
+# モデル比較実験
+python3 examples/compare_skills.py gemma4:e2b tech_writing_ja "DNSとは何ですか"
 ```
