@@ -2,6 +2,50 @@ local_agent
 
 ローカルLLMでAIエージェント
 
+---
+
+## 運用計画
+
+### 現在の方針（B案）
+
+`~/.zshrc` にエイリアスを追加し、`~/projects` 以下どこからでも `agent` コマンドで呼び出せるようにする。
+スキルは `~/projects/local_agent/skills/` に集約して管理する。
+
+```bash
+# ~/.zshrc に追記
+alias agent='python ~/projects/local_agent/scripts/agent.py'
+```
+
+使用例：
+```bash
+cd ~/projects/okiden
+agent --skill tech_writing_ja   # skills/ は local_agent/skills/ から読む
+# read_file / write_file はカレント（okiden/）に対して動く
+```
+
+### 将来の拡張（C案）：プロジェクト固有スキルのサポート
+
+プロジェクトごとに独自スキルを持ちたくなったとき、`AGENT_SKILLS_DIR` 環境変数で
+スキルディレクトリを上書きできるよう `skill_loader.py` を拡張する。
+
+**変更箇所**: `scripts/skill_loader.py` の `SKILLS_DIR` 定義を以下に変更
+
+```python
+import os
+SKILLS_DIR = Path(os.environ.get(
+    "AGENT_SKILLS_DIR",
+    Path(__file__).parent.parent / "skills"
+))
+```
+
+使用例：
+```bash
+# プロジェクト固有の skills/ を使う
+AGENT_SKILLS_DIR=~/projects/okiden/skills agent --skill okiden_report
+```
+
+---
+
 **MacでOllama + Claude Code風CLIを最短セットアップできます**。環境変数をOllamaのAPIに差し替えることで、Claude CodeをローカルLLMで動かせますが、実用性はモデル次第で限定的です 。[1][2]
 
 ## 必要なもの

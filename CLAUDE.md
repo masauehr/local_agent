@@ -93,7 +93,8 @@ local_agent/
 │   ├── README.md         # スキルの書き方ガイド
 │   ├── template.md       # 新規スキル作成テンプレート
 │   ├── tech_writing_ja.md # 技術文書作成スキル（実用例）
-│   └── code_review.md    # コードレビュースキル
+│   ├── code_review.md    # コードレビュースキル
+│   └── git_commit_push.md # git status→add→commit→push を全自動実行するスキル
 └── examples/
     └── compare_skills.py  # スキルあり・なしの回答を並べて比較する実験スクリプト
 ```
@@ -106,10 +107,32 @@ local_agent/
 - `agent.py` に `write_file` / `list_files` / `run_git` ツールを追加済み
 - `<tool_call>` テキスト形式フォールバックパーサーを実装済み（モデル非依存）
 
+### git操作スキル実験（2026-04-22）
+
+#### 試みたこと
+- `git_commit_push` スキルを作成（status → add → commit → push の全自動フロー）
+- `lagent`（Bonsai-8B / llama-server）で「git関連のskillを読んで、pushまで全部やって」と指示
+
+#### 判明した問題と対処
+
+| 問題 | 原因 | 対処 |
+|------|------|------|
+| `push` 前に確認質問が出る | システムプロンプトに`push`の例がなかった | `agent.py` のシステムプロンプトに例を追記 |
+| `git add` がスキップされる | モデルがstepを省略する | スキルに「addをスキップ禁止」を明記・add後のstatus確認を追加 |
+| 「追加して」→ `read_file` が呼ばれる | `git add` と `read_file` の区別がつかない | システムプロンプトに `git add` の例を追記 |
+| ステップ上限（5回）でpush前に終了 | `run_turn` の上限が低すぎた | 上限を5→10に変更 |
+| `git add .` でなく個別ファイルだけaddされる | スキルの指示が弱い | 現在未解決 |
+
+#### 結果
+- Bonsai-8B（lagent）での「全自動push」は**現時点では不安定**
+- `list_files → status → add → status確認 → commit` まで動くが、pushに至らないことが多い
+- 多段ツール連鎖はモデル性能に強く依存する
+
 ### 次にやること
-- 新しいスキルを作って試す（`skills/template.md` を元に）
-- エージェントにチャット内容をマニュアルとして保存させる（`write_file` + `commit_message` スキルを組み合わせ）
+- `git add .`（全ファイル）ではなく個別addになる問題の解消
+- Bonsai-8B での多段ツール連鎖の安定化（スキルの書き方改善）
 - 他のモデル（`deepseek-coder:1.3b` 等）でツール呼び出し精度を比較
+- エージェントにチャット内容をマニュアルとして保存させる実験
 
 ### 起動コマンド
 ```bash

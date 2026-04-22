@@ -12,6 +12,7 @@ agent.py — ローカルLLMを使ったインタラクティブAIエージェ�
 import argparse
 import os
 import re
+import readline  # 矢印キーによる入力履歴を有効化
 import subprocess
 import sys
 import json
@@ -30,9 +31,11 @@ DEFAULT_SYSTEM_PROMPT = os.environ.get(
     "- ファイルの読み込み・書き込み・一覧取得・git操作が必要な場合は、"
     "自分で推測せず必ずツールを呼び出して実行すること。\n"
     "- 'git statusを確認して' → run_git ツールを args=[\"status\"] で呼び出す。\n"
+    "- '〜をgitに追加して' / '〜をaddして' / 'git add 〜' → run_git を args=[\"add\", \"ファイル名\"] で呼び出す。read_file は呼ばない。\n"
     "- 'ファイルを読んで' → read_file ツールを呼び出す。\n"
     "- 'ファイルを作って' → write_file ツールを呼び出す。\n"
-    "- 'コミットして' → run_git を args=[\"add\",\".\"] → args=[\"commit\",\"-m\",\"...\"] の順で呼び出す。\n"
+    "- 'コミットして' → まず run_git を args=[\"status\"] で状態確認し、適切なコミットメッセージを自分で考えて args=[\"commit\",\"-m\",\"メッセージ\"] で実行する。ユーザーにメッセージや内容を聞き返さないこと。\n"
+    "- 'pushして' / 'git pushせよ' → run_git を args=[\"push\"] で呼び出す。リモートやブランチを聞き返さず即実行すること。\n"
     "- ツールの実行結果をもとに日本語で回答すること。\n",
 )
 
@@ -229,7 +232,7 @@ def run_turn(client: OpenAI, messages: list) -> str:
     1ターン分の処理（ツール呼び出しを含むループ）を実行し、最終回答を返す。
     モデルが API 形式・テキスト形式どちらでツール呼び出しを出力しても対応する。
     """
-    for _ in range(5):  # ツール呼び出しの最大連鎖回数
+    for _ in range(10):  # ツール呼び出しの最大連鎖回数
         response = client.chat.completions.create(
             model=MODEL,
             messages=messages,
