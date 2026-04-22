@@ -214,6 +214,14 @@ def execute_tool(name: str, args: dict) -> str:
 _TOOL_CALL_RE = re.compile(r'<tool_call>\s*(\{.*?\})\s*</tool_call>', re.DOTALL)
 
 
+def _extract_usage(skill_text: str) -> str:
+    """スキルファイルの ## 使い方 セクションを抽出する"""
+    match = re.search(r'^## 使い方\n(.*?)(?=\n^##|\Z)', skill_text, re.MULTILINE | re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
 def _parse_text_tool_calls(content: str) -> list[dict]:
     """<tool_call> タグ形式のテキスト出力からツール呼び出しをパースする"""
     results = []
@@ -303,10 +311,12 @@ def main() -> None:
     # スキル読み込み（--skill フラグ → 環境変数 → デフォルト の順で優先）
     skill_name = args.skill or os.environ.get("AGENT_SKILL")
     system_prompt = DEFAULT_SYSTEM_PROMPT
+    usage_text = ""
     if skill_name:
         try:
             from skill_loader import load_skill
             system_prompt = load_skill(skill_name)
+            usage_text = _extract_usage(system_prompt)
             print(f"\033[35m[スキル]\033[0m '{skill_name}' を読み込みました")
         except FileNotFoundError as e:
             print(f"\033[31m[警告]\033[0m {e}")
@@ -316,6 +326,10 @@ def main() -> None:
     print(f"モデル : {MODEL}")
     print(f"接続先 : {OLLAMA_BASE_URL}")
     print(f"スキル : {skill_name or 'なし（デフォルト）'}")
+    if usage_text:
+        print(f"\033[35m─── 使い方 ───────────────────\033[0m")
+        print(f"\033[35m{usage_text}\033[0m")
+        print(f"\033[35m──────────────────────────────\033[0m")
     print("'exit' または Ctrl+C で終了\n")
 
     client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
