@@ -42,6 +42,12 @@ bllama    # Bonsai-8B（llama-server）で起動 ※事前に llama-server の�
 
 > エイリアスは `~/.bash_profile` に登録済み（当初 `.zshrc` に設定していたが移行）。
 
+> **注意**: `lagent` だけで起動してもスキルは読み込まれない。スキルは起動時に `--skill` で指定する必要がある。チャット中に「スキルを読んで」と言っても、会話の文脈に読み込まれるだけでシステムプロンプトには反映されない。
+
+```bash
+lagent --skill git_commit_push   # スキルを指定して起動
+```
+
 ### 直接起動する場合
 
 ```bash
