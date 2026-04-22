@@ -33,6 +33,17 @@ local_agent/
 
 ## クイックスタート
 
+### エイリアスで起動（推奨）
+
+```bash
+lagent    # Ollama + gemma4:e2b で起動
+bllama    # Bonsai-8B（llama-server）で起動 ※事前に llama-server の起動が必要
+```
+
+> エイリアスは `~/.bash_profile` に登録済み（当初 `.zshrc` に設定していたが移行）。
+
+### 直接起動する場合
+
 ```bash
 cd ~/projects/local_agent
 source .venv/bin/activate
@@ -63,6 +74,7 @@ python3 scripts/agent.py --list-skills
 | `debug_helper` | エラーから「種類→原因→修正方法→確認手順」を提示 |
 | `commit_message` | diffから `feat/fix/refactor` 等のprefixつきメッセージを生成 |
 | `regex_explainer` | 正規表現を解説・生成・デバッグ。パーツ表・マッチ例つき |
+| `git_commit_push` | status→add→commit→push を全自動実行。メッセージも自動生成 |
 
 ### スキルあり・なしの比較実験
 
