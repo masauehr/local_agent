@@ -81,6 +81,10 @@ python3 scripts/agent.py --list-skills
 | `commit_message` | diffから `feat/fix/refactor` 等のprefixつきメッセージを生成 |
 | `regex_explainer` | 正規表現を解説・生成・デバッグ。パーツ表・マッチ例つき |
 | `git_commit_push` | status→add→commit→push を全自動実行。メッセージも自動生成 |
+| `git_status` | git status を呼んで結果を表示（1ステップ専用） |
+| `git_add` | git add . → status 確認（1ステップ専用） |
+| `git_commit` | status 確認 → commit（メッセージ自動生成）（1ステップ専用） |
+| `git_push` | push → log 確認（1ステップ専用） |
 
 ### スキルあり・なしの比較実験
 
