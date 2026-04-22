@@ -20,8 +20,8 @@ import math
 from openai import OpenAI
 
 # 設定（環境変数で上書き可能）
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:e2b")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:8080/v1")
+MODEL = os.environ.get("OLLAMA_MODEL", "Bonsai-8B")
 DEFAULT_SYSTEM_PROMPT = os.environ.get(
     "AGENT_SYSTEM_PROMPT",
     "あなたはファイル操作とgit操作ができるプログラミングアシスタントです。\n"

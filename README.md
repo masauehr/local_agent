@@ -36,8 +36,8 @@ local_agent/
 ### エイリアスで起動（推奨）
 
 ```bash
-lagent    # Ollama + gemma4:e2b で起動
-bllama    # Bonsai-8B（llama-server）で起動 ※事前に llama-server の起動が必要
+bllama    # Bonsai-8B 用 llama-server を起動（先に実行しておく）
+lagent    # llama-server + Bonsai-8B で agent.py を起動（bllama が前提）
 ```
 
 > エイリアスは `~/.bash_profile` に登録済み（当初 `.zshrc` に設定していたが移行）。
@@ -54,7 +54,7 @@ lagent --skill git_commit_push   # スキルを指定して起動
 cd ~/projects/local_agent
 source .venv/bin/activate
 
-# デフォルト（gemma4:e2b + スキルなし）
+# デフォルト（Bonsai-8B + スキルなし）※llama-server が起動済みであること
 python3 scripts/agent.py
 
 # スキルを指定して起動

@@ -102,7 +102,8 @@ local_agent/
 ### 実験結果サマリー（2026-04-21）
 
 - スキルによってフォーマット・構造化・中国語漏れ抑制の効果を確認
-- `gemma4:e2b` がツール呼び出し・日本語品質ともに最も安定 → **デフォルトモデルに設定済み**
+- `gemma4:e2b` がツール呼び出し・日本語品質ともに最も安定（実験当時）
+- `Bonsai-8B` を **現在のデフォルトモデルに設定済み**（llama-server / ポート8080）
 - `qwen2.5:7b` はシステムプロンプトで言語ルールを明示しないと中国語が混入する
 - `agent.py` に `write_file` / `list_files` / `run_git` ツールを追加済み
 - `<tool_call>` テキスト形式フォールバックパーサーを実装済み（モデル非依存）
@@ -139,7 +140,7 @@ local_agent/
 cd ~/projects/local_agent
 source .venv/bin/activate
 
-# デフォルト（gemma4:e2b）
+# デフォルト（Bonsai-8B）※事前に bllama でサーバー起動が必要
 python3 scripts/agent.py
 
 # スキルあり
