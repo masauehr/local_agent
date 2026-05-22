@@ -302,6 +302,7 @@ class Tetris:
         make_text("Space : Hard Drop", info_y + 115)
         make_text("P : Pause", info_y + 140)
         make_text("R : Restart", info_y + 165)
+        make_text("Esc : Quit", info_y + 190)
 
     def draw_hard_drop_line(self):
         """ハードドロップ時のライン表示"""
@@ -406,6 +407,8 @@ class Tetris:
         kpd = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
