@@ -238,8 +238,10 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 | Claude Code（安定稼働重視） | `qwen3.6:35b-mlx` | 実績あり・安定 |
 | 日本語チャット・文章校正 | `RakutenAI Q4_K_M` or `Q8_0` | 日本語の自然さが最良 |
 
-#### 備考
+#### Claude Code（AIエージェント）での追加評価
 
+- **qwen3.6:35b-mlx**: コード修正に失敗する傾向あり、バグを解消できないケースがあった。論理的思考は向上しているが、コード生成能力は qwen3.5 からあまり改善していない印象
+- **gemma4:31b-mlx**: チャット評価ではコード生成が qwen より良い印象。Claude Code でのエージェント性能は Ollama アップデート後に要検証
 - gemma4:31b-mlx は Ollama 0.20.2 で `unsupported architecture` エラー → **Ollama アップデートが必要**
 - qwen3.6 / gemma4 はコンテキスト内に英語が混入する傾向あり（日本語チャット用途では気になる）
 - RakutenAI は論理推論・コード生成が弱く、Claude Code での利用不可（ツール非対応）
