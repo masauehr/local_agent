@@ -246,8 +246,20 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
   - `.py` ファイルや Jupyter Notebook への書き出し命令で **ハングアップ** ❌（ファイル書き込みツールの呼び出しが正しく動作しない）
   - コードをチャット上で生成する能力は十分だが、Claude Code のツール（Write/Edit）との連携が不安定
 - gemma4:31b-mlx は Ollama 0.20.2 で `unsupported architecture` エラー → Ollama アップデートで解消
+- **devstral-small-2:24b**: テトリスコード生成は可能だがファイル保存に時間がかかりすぎ、性能も gemma4 より劣る。**実用的ではない**
 - qwen3.6 / gemma4 はコンテキスト内に英語が混入する傾向あり（日本語チャット用途では気になる）
 - RakutenAI は論理推論・コード生成が弱く、Claude Code での利用不可（ツール非対応）
+
+#### Claude Code 実用評価まとめ（2026-05-22時点）
+
+現時点では**どのローカルモデルも Claude Code での実用レベルには達していない**。
+
+| モデル | コード生成 | ファイル書き出し | 総合評価 |
+|--------|-----------|---------------|---------|
+| `gemma4:31b-mlx` | ✅ 動くコードを生成 | ❌ ハングアップ | 最も期待できるが不安定 |
+| `qwen3.6:35b-mlx` | △ バグ解消できないケースあり | ✅ 動作する | ツール連携は安定するが品質不足 |
+| `devstral-small-2:24b` | △ 生成できるが遅い | ❌ 非常に遅い | 実用的でない |
+| `RakutenAI` | ❌ 拒否 | ❌ ツール非対応 | Claude Code 不可 |
 
 ---
 
@@ -255,26 +267,26 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 
 | 目的 | 推奨構成 |
 |------|---------|
-| **Claude Code / AIエージェント（最高性能）** | `gemma4:31b-mlx`（Ollama 最新版が必要） |
-| **Claude Code / AIエージェント（安定稼働）** | `qwen3.6:35b-mlx` |
-| **日本語チャット・文章校正** | `RakutenAI Q4_K_M`（同時起動なら）/ `Q8_0`（単独） |
+| **Claude Code（現時点で最もマシ）** | `qwen3.6:35b-mlx`（ツール連携が最も安定） |
+| **日本語チャット・文章校正** | `RakutenAI Q4_K_M` or `Q8_0` |
 | **超大型モデルを試す** | `-cloud` タグ（397B など）← 課金に注意 |
 | **Continue で使う** | Ollama プロバイダーとして設定 |
 
 ### 起動コマンド
 
 ```bash
-# Claude Code をローカルモデルで起動（Ollama 公式の方法）
-ollama launch claude --model gemma4:31b-mlx     # エージェント最高性能（要Ollamaアップデート）
-ollama launch claude --model qwen3.6:35b-mlx    # 安定稼働
+# Claude Code をローカルモデルで起動
+ollama launch claude --model qwen3.6:35b-mlx    # 現時点で最安定
 
 # 日本語チャット（ollama run で直接対話）
 ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q4_K_M
 ```
 
-### 結論（2026-05-22 実験後更新）
-- `gemma4:31b-mlx` は Ollama 0.20.2 未対応（アップデート後に再評価予定）
-- `qwen3.6:35b-mlx` は Claude Code・AIエージェント用途で安定した実績あり
-- `RakutenAI` は日本語の自然さが最も優れるが論理推論・コード生成は弱い
+### 結論（2026-05-22 実験完了）
+- **ローカルLLMでの Claude Code 実用はまだ困難**。コード生成はできても、ファイル書き出し・バグ修正・多段ツール連携が不安定
+- `qwen3.6:35b-mlx` がツール連携の安定性では現時点で最良
+- `gemma4:31b-mlx` はコード生成力があるが Write/Edit ツールでハングする
+- `devstral-small-2:24b` はファイル保存が遅すぎて実用的でない
+- `RakutenAI` は日本語チャット専用として割り切る
 - `-mlx` タグ = ローカル MLX 実行（無料・Apple Silicon 最適化・課金なし）
 - `-cloud` タグ = クラウド API 経由（課金あり・`API Usage Billing` 表示）
