@@ -217,17 +217,32 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 
 ### 実験結果（2026-05-22）
 
-- **日本語品質**: ✅ 十分良好
-- **速度**: ✅ 速い（MoE構造のため推論時は7B相当の計算量）
-- **知識精度**: ✅ 本居宣長・太陽系の惑星など正しく説明できた
-- **Claude Code での使用**: ❌ ツール呼び出し非対応（`does not support tools` エラー）
+#### RakutenAI / qwen3.6 / gemma4 の3モデル比較
 
-### 用途の使い分け
+| 評価項目 | RakutenAI Q4_K_M | qwen3.6:35b-mlx | gemma4:31b-mlx |
+|---------|-----------------|-----------------|----------------|
+| **日本語の自然さ** | ◎ 最も自然 | △ 英語が混じる | △ 英語の思考過程が表示されて煩わしい |
+| **知識の正確さ** | ✅ 正確 | ✅ 正確 | ✅ 正確 |
+| **論理的思考** | ❌ 間違えた | ✅ 正しい | ✅ 正しい |
+| **コード生成** | ❌ 拒否 | ○ 可能 | ◎ qwenより良い印象 |
+| **日本語文章の修正** | ◎ 期待できる | 未評価 | 未評価 |
+| **AIエージェント適性** | ❌ ツール非対応 | ✅ 十分 | ◎ より良い可能性 |
+| **速度** | ✅ 速い | ✅ 速い | 未評価 |
+| **Claude Code 使用** | ❌ ツール非対応 | ✅ 対応 | ✅ 対応（要アップデート） |
 
-| 用途 | モデル |
-|------|-------|
-| Claude Code（コーディング支援） | `qwen3.6:35b-mlx`（ツール対応必須） |
-| 日本語チャット・Q&A | `hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0` |
+#### 用途別推奨モデル
+
+| 用途 | 推奨モデル | 理由 |
+|------|-----------|------|
+| Claude Code / AIエージェント | `gemma4:31b-mlx` | ツール対応・コード生成◎ |
+| Claude Code（安定稼働重視） | `qwen3.6:35b-mlx` | 実績あり・安定 |
+| 日本語チャット・文章校正 | `RakutenAI Q4_K_M` or `Q8_0` | 日本語の自然さが最良 |
+
+#### 備考
+
+- gemma4:31b-mlx は Ollama 0.20.2 で `unsupported architecture` エラー → **Ollama アップデートが必要**
+- qwen3.6 / gemma4 はコンテキスト内に英語が混入する傾向あり（日本語チャット用途では気になる）
+- RakutenAI は論理推論・コード生成が弱く、Claude Code での利用不可（ツール非対応）
 
 ---
 
@@ -235,14 +250,26 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 
 | 目的 | 推奨構成 |
 |------|---------|
-| **Claude Code メイン（最もシンプル）** | `ollama launch claude --model qwen3.6:35b-mlx` |
-| **最速・無料** | Ollama の `-mlx` タグモデル（MLX ローカル実行） |
+| **Claude Code / AIエージェント（最高性能）** | `gemma4:31b-mlx`（Ollama 最新版が必要） |
+| **Claude Code / AIエージェント（安定稼働）** | `qwen3.6:35b-mlx` |
+| **日本語チャット・文章校正** | `RakutenAI Q4_K_M`（同時起動なら）/ `Q8_0`（単独） |
 | **超大型モデルを試す** | `-cloud` タグ（397B など）← 課金に注意 |
 | **Continue で使う** | Ollama プロバイダーとして設定 |
 
-### 結論
-- `ollama launch claude` は Ollama 公式の Claude Code 起動コマンド（環境変数設定不要）
-- `-mlx` タグ = ローカル MLX 実行（無料・Apple Silicon 最適化・最速）
+### 起動コマンド
+
+```bash
+# Claude Code をローカルモデルで起動（Ollama 公式の方法）
+ollama launch claude --model gemma4:31b-mlx     # エージェント最高性能（要Ollamaアップデート）
+ollama launch claude --model qwen3.6:35b-mlx    # 安定稼働
+
+# 日本語チャット（ollama run で直接対話）
+ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q4_K_M
+```
+
+### 結論（2026-05-22 実験後更新）
+- `gemma4:31b-mlx` は Ollama 0.20.2 未対応（アップデート後に再評価予定）
+- `qwen3.6:35b-mlx` は Claude Code・AIエージェント用途で安定した実績あり
+- `RakutenAI` は日本語の自然さが最も優れるが論理推論・コード生成は弱い
+- `-mlx` タグ = ローカル MLX 実行（無料・Apple Silicon 最適化・課金なし）
 - `-cloud` タグ = クラウド API 経由（課金あり・`API Usage Billing` 表示）
-- 最新世代（Qwen3.6 MoE）は旧世代大モデルを性能・速度ともに上回る
-- `-mlx` モデルを使う限り、Claude Code でも MLX の恩恵を受けられる
