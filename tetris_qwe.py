@@ -33,6 +33,55 @@ def _init_sounds():
     sounds["gameover"] = _make_sound([(330, 0.1), (277, 0.1), (247, 0.15), (185, 0.4)], volume=0.5)
     return sounds
 
+# ─────────────────── BGM（コロブチカ）───────────────────
+_NOTE_FREQ = {
+    'C4':261.63,'D4':293.66,'E4':329.63,'F4':349.23,'G4':392.00,
+    'A4':440.00,'B4':493.88,
+    'C5':523.25,'D5':587.33,'E5':659.25,'F5':698.46,'G5':783.99,
+    'A5':880.00,'B5':987.77,
+    'C3':130.81,'G3':196.00,'A3':220.00,'B3':246.94,'E3':164.81,
+    'R': 0,
+}
+
+# コロブチカ（Korobeiniki）メロディ: (音名, 拍数)
+_KOROBEINIKI = [
+    ('E5',1),('B4',.5),('C5',.5),('D5',1),('C5',.5),('B4',.5),
+    ('A4',1),('A4',.5),('C5',.5),('E5',1),('D5',.5),('C5',.5),
+    ('B4',1.5),('C5',.5),('D5',1),('E5',1),
+    ('C5',1),('A4',1),('A4',1),('R',1),
+    ('R',.5),('D5',1),('F5',.5),('A5',1),('G5',.5),('F5',.5),
+    ('E5',1.5),('C5',.5),('E5',1),('D5',.5),('C5',.5),
+    ('B4',1),('B4',.5),('C5',.5),('D5',1),('E5',1),
+    ('C5',1),('A4',1),('A4',1),('R',1),
+]
+
+def _make_bgm(melody, bpm=160, volume=0.22):
+    """コロブチカを波形合成して Sound オブジェクトを返す"""
+    beat = 60.0 / bpm
+    buf = array.array('h')
+    for note, beats in melody:
+        freq = _NOTE_FREQ.get(note, 0)
+        dur = beats * beat
+        n = int(SAMPLE_RATE * dur)
+        attack = min(int(0.01 * SAMPLE_RATE), n)
+        release = min(int(0.08 * SAMPLE_RATE), n)
+        for i in range(n):
+            if i < attack:
+                env = i / attack
+            elif i > n - release:
+                env = max(0.0, (n - i) / release)
+            else:
+                env = 1.0
+            if freq > 0:
+                # 正弦波 + 倍音で少し厚みを出す
+                val = (math.sin(2 * math.pi * freq * i / SAMPLE_RATE) * 0.6
+                     + math.sin(4 * math.pi * freq * i / SAMPLE_RATE) * 0.3
+                     + math.sin(6 * math.pi * freq * i / SAMPLE_RATE) * 0.1)
+                buf.append(int(volume * 32767 * val * env))
+            else:
+                buf.append(0)
+    return pygame.mixer.Sound(buffer=buf)
+
 # ───────────────────────── 定数 ─────────────────────────
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 700
@@ -131,6 +180,10 @@ class Tetris:
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.sounds = _init_sounds()
+        pygame.mixer.set_num_channels(8)
+        self.bgm = _make_bgm(_KOROBEINIKI)
+        self.bgm_channel = pygame.mixer.Channel(0)
+        self.bgm_channel.play(self.bgm, loops=-1)
         pygame.display.set_caption("Tetris")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 36)
@@ -140,6 +193,8 @@ class Tetris:
     def reset_game(self):
         """ゲーム状態をリセット"""
         self.grid = [[0] * GRID_COLS for _ in range(GRID_ROWS)]
+        if hasattr(self, 'bgm_channel') and not self.bgm_channel.get_busy():
+            self.bgm_channel.play(self.bgm, loops=-1)
         self.score = 0
         self.level = 1
         self.lines = 0
@@ -161,6 +216,7 @@ class Tetris:
         # 生成不可能な場合はゲームオーバー
         if not self.can_move(piece, 0, 0):
             self.game_over = True
+            self.bgm_channel.stop()
             self.sounds["gameover"].play()
         return piece
 
