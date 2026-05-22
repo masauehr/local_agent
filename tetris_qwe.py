@@ -5,6 +5,33 @@ Pygame を使用したテトリスゲーム
 import pygame
 import random
 import sys
+import array
+import math
+
+SAMPLE_RATE = 44100
+
+def _make_sound(notes, volume=0.4):
+    """(周波数Hz, 秒数) のリストから Sound オブジェクトを生成する"""
+    buf = array.array('h')
+    for freq, dur in notes:
+        n = int(SAMPLE_RATE * dur)
+        for i in range(n):
+            t = i / SAMPLE_RATE
+            fade = max(0.0, 1.0 - i / n)
+            val = int(volume * 32767 * math.sin(2 * math.pi * freq * t) * fade)
+            buf.append(val)
+    return pygame.mixer.Sound(buffer=buf)
+
+def _init_sounds():
+    sounds = {}
+    sounds["move"]     = _make_sound([(440, 0.04)], volume=0.2)
+    sounds["rotate"]   = _make_sound([(550, 0.05)], volume=0.2)
+    sounds["lock"]     = _make_sound([(220, 0.08)], volume=0.3)
+    sounds["clear"]    = _make_sound([(523, 0.07), (659, 0.07), (784, 0.12)], volume=0.5)
+    sounds["tetris"]   = _make_sound([(523, 0.07), (659, 0.07), (784, 0.07), (1047, 0.2)], volume=0.6)
+    sounds["levelup"]  = _make_sound([(440, 0.06), (523, 0.06), (659, 0.06), (880, 0.15)], volume=0.5)
+    sounds["gameover"] = _make_sound([(330, 0.1), (277, 0.1), (247, 0.15), (185, 0.4)], volume=0.5)
+    return sounds
 
 # ───────────────────────── 定数 ─────────────────────────
 SCREEN_WIDTH = 600
@@ -100,8 +127,10 @@ class Tetris:
     """テトリスゲーム本体"""
 
     def __init__(self):
+        pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=1, buffer=512)
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.sounds = _init_sounds()
         pygame.display.set_caption("Tetris")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 36)
@@ -132,6 +161,7 @@ class Tetris:
         # 生成不可能な場合はゲームオーバー
         if not self.can_move(piece, 0, 0):
             self.game_over = True
+            self.sounds["gameover"].play()
         return piece
 
     def can_move(self, piece, dx, dy):
@@ -157,6 +187,7 @@ class Tetris:
                     nx = piece.x + j
                     if 0 <= ny < GRID_ROWS and 0 <= nx < GRID_COLS:
                         self.grid[ny][nx] = piece.piece_type
+        self.sounds["lock"].play()
 
     def clear_lines(self):
         """ライン消去"""
@@ -170,11 +201,18 @@ class Tetris:
             self.pieces_cleared_anims.append((self.last_drop, GRID_SIZE * 3))
 
         if cleared:
+            prev_level = self.level
             counts = {1: 100, 2: 300, 3: 500, 4: 800}
             self.score += counts.get(len(cleared), 0) * self.level
             self.lines += len(cleared)
             self.level = min(15, self.lines // 10 + 1)
             self.drop_interval = max(100, 500 - (self.level - 1) * 30)
+            if len(cleared) == 4:
+                self.sounds["tetris"].play()
+            else:
+                self.sounds["clear"].play()
+            if self.level > prev_level:
+                self.sounds["levelup"].play()
 
         return bool(cleared)
 
@@ -331,6 +369,7 @@ class Tetris:
         while self.can_move(self.current_piece, 0, 1):
             self.current_piece.y += 1
             self.score += 2
+        self.sounds["lock"].play()
         self.lock_piece()
         self.clear_lines()
         self.current_piece = self.spawn_piece()
@@ -345,6 +384,7 @@ class Tetris:
         """左右移動"""
         if self.can_move(self.current_piece, dx, 0):
             self.current_piece.x += dx
+            self.sounds["move"].play()
 
     def rotate_piece(self):
         """回転（壁蹴り対応）"""
@@ -355,6 +395,7 @@ class Tetris:
         for kick in [0, 1, -1, 2, -2]:
             if self.can_move(self.current_piece, kick, 0):
                 self.current_piece.x += kick
+                self.sounds["rotate"].play()
                 return
         # 回転失敗時は元に戻す
         self.current_piece.rotation = orig_rotation
