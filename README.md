@@ -16,7 +16,7 @@
 |---------|------|
 | [CLAUDE.md](CLAUDE.md) | プロジェクト設定・技術スタック・MLXモデル解説 |
 | [LLM.md](LLM.md) | ローカルLLM調査まとめ（Mac / Apple Silicon / 64GB向け） |
-| [SML.md](SML.md) | 小サイズモデル実験記録（MacBook Air 8GB / Bonsai-8B等） |
+| [SLM.md](SLM.md) | 小サイズモデル実験記録（MacBook Air 8GB / Bonsai-8B等） |
 | [local-llm-agent.md](local-llm-agent.md) | 詳細マニュアル・操作手順・トラブルシューティング |
 
 ## ディレクトリ構成
@@ -48,7 +48,7 @@ local_agent/
 ├── start.sh                 # Claude Code をローカルLLMで起動
 ├── CLAUDE.md                # プロジェクト設定・技術スタック
 ├── LLM.md                   # ローカルLLM調査まとめ（64GB Mac向け）
-├── SML.md                   # SML実験記録（8GB Mac向け）
+├── SLM.md                   # SLM実験記録（8GB Mac向け）
 └── local-llm-agent.md       # 詳細マニュアル
 ```
 
@@ -92,9 +92,9 @@ python3 scripts/agent.py --list-skills
 |--------|------------|--------------|-----------|
 | `qwen3.6:35b-mlx`（35B MoE / 3B活性） | Ollama MLX | ◎ 安定・**最新推奨** | ◎ |
 | `gemma4:e2b`（31B Gemma系） | Ollama | ◎ 安定 | ◎ |
-| `qwen3.6:397b-cloud` | Ollama Cloud | △ | ○ |
+| `qwen3.5:397b-cloud` | Ollama Cloud | △ | ○ |
 
-### 8GB Mac 向け（SML実験）
+### 8GB Mac 向け（SLM実験）
 
 | モデル | バックエンド | ツール呼び出し | 日本語品質 |
 |--------|------------|--------------|-----------|
@@ -102,7 +102,7 @@ python3 scripts/agent.py --list-skills
 | `Bonsai-8B`（1.1GB） | llama-server | ○ 単発OK・連鎖は不安定 | ○ |
 | `qwen2.5:7b`（4.7GB） | Ollama | △ 不安定 | △ 中国語漏れあり |
 
-> 詳細な実験記録と環境別の推奨構成は [SML.md](SML.md) を参照。
+> 詳細な実験記録と環境別の推奨構成は [SLM.md](SLM.md) を参照。
 
 ### MLXモデルについて
 

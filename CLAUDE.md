@@ -6,7 +6,7 @@
 
 あわせて、ファイル操作・git操作を自然言語で実行できるツール呼び出し機能も実装・実験している。
 
-- 古い環境（MacBook Air 8GB）の実験記録: [SML.md](SML.md)
+- 古い環境（MacBook Air 8GB）の実験記録: [SLM.md](SLM.md)
 - モデル比較・設定ガイド: [LLM.md](LLM.md)
 
 ## 技術スタック
@@ -110,7 +110,7 @@ curl http://localhost:11434/api/tags
 shi3zblog の記事で言及された「スキル」概念（AI向け専門指示書Markdownファイル）を実装・検証。
 スキル = **LLMへの専門指示書**。システムプロンプトとして渡すことで、回答のフォーマット・構造化・言語制御を向上できる。
 
-- 詳細な実験記録: [SML.md](SML.md)（MacBook Air 8GBでの旧実験）
+- 詳細な実験記録: [SLM.md](SLM.md)（MacBook Air 8GBでの旧実験）
 
 ## スキルの実装
 

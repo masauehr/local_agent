@@ -1,4 +1,4 @@
-# SML（Small Language Model）実験記録
+# SLM（Small Language Model）実験記録
 
 > 調査日: 2026-04-21 〜 2026-04-23  
 > 環境: **MacBook Air / 8GB ユニファイドメモリ**  
