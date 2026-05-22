@@ -1,6 +1,6 @@
 # local_agent
 
-ローカルLLM（Ollama / llama.cpp）にスキルを与えて、タスク特化型AIエージェントを構築・実験するプロジェクト。
+ローカルLLM（Ollama / llama.cpp / mlx_lm）にスキルを与えて、タスク特化型AIエージェントを構築・実験するプロジェクト。
 
 > 詳しい仕組み・実験結果・トラブルシューティングは [local-llm-agent.md](local-llm-agent.md) を参照。
 
@@ -10,65 +10,114 @@
 
 あわせて、ファイル操作・git操作を自然言語で実行できるエージェント機能も実装済み。
 
+## ドキュメント
+
+| ファイル | 内容 |
+|---------|------|
+| [CLAUDE.md](CLAUDE.md) | プロジェクト設定・技術スタック・MLXモデル解説 |
+| [LLM.md](LLM.md) | ローカルLLM調査まとめ（Mac / Apple Silicon / 64GB向け） |
+| [SML.md](SML.md) | 小サイズモデル実験記録（MacBook Air 8GB / Bonsai-8B等） |
+| [local-llm-agent.md](local-llm-agent.md) | 詳細マニュアル・操作手順・トラブルシューティング |
+
 ## ディレクトリ構成
 
 ```
 local_agent/
 ├── scripts/
-│   ├── agent.py            # インタラクティブエージェント（ツール呼び出し対応）
-│   └── skill_loader.py     # スキルファイル読み込みユーティリティ
-├── skills/                 # スキルファイル（LLMへの専門指示書）
-│   ├── tech_writing_ja.md  # 技術文書作成スキル
-│   ├── code_review.md      # コードレビュースキル
-│   ├── debug_helper.md     # デバッグ支援スキル
-│   ├── commit_message.md   # コミットメッセージ生成スキル
-│   ├── regex_explainer.md  # 正規表現解説・生成スキル
-│   ├── template.md         # 新規スキル作成テンプレート
-│   └── README.md           # スキルの書き方ガイド
+│    ├── agent.py             # インタラクティブエージェント（ツール呼び出し対応）
+│    └── skill_loader.py      # スキルファイル読み込みユーティリティ
+├── skills/                   # スキルファイル（LLMへの専門指示書）
+│    ├── tech_writing_ja.md   # 技術文書作成スキル
+│    ├── code_review.md       # コードレビュースキル
+│    ├── debug_helper.md      # デバッグ支援スキル
+│    ├── commit_message.md    # コミットメッセージ生成スキル
+│    ├── regex_explainer.md   # 正規表現解説・生成スキル
+│    ├── git_commit_push.md   # git全自動実行（status→add→commit→push）
+│    ├── git_status.md        # git status専用（1ステップ）
+│    ├── git_add.md           # git add . 専用（1ステップ）
+│    ├── git_commit.md        # git commit 専用（1ステップ）
+│    ├── git_push.md          # git push 専用（1ステップ）
+│    ├── template.md          # 新規スキル作成テンプレート
+│    └── README.md            # スキルの書き方ガイド
 ├── examples/
-│   ├── basic_chat.py       # 基本チャットサンプル
-│   └── compare_skills.py   # スキルあり・なしの回答を比較する実験スクリプト
+│    ├── basic_chat.py        # 基本チャットサンプル
+│    ├── compare_skills.py    # スキルあり・なしの回答を比較
+│    └── tool_use_test.py     # ツール呼び出し動作確認
 ├── setup/
-│   └── install.sh          # 初回セットアップ
-└── CLAUDE.md               # このプロジェクトへの指示
+│    └── install.sh           # 初回セットアップ
+├── start.sh                 # Claude Code をローカルLLMで起動
+├── CLAUDE.md                # プロジェクト設定・技術スタック
+├── LLM.md                   # ローカルLLM調査まとめ（64GB Mac向け）
+├── SML.md                   # SML実験記録（8GB Mac向け）
+└── local-llm-agent.md       # 詳細マニュアル
 ```
 
 ## クイックスタート
 
-### エイリアスで起動（推奨）
+### Claude Code をローカルLLMで起動（推奨）
 
 ```bash
-bllama    # Bonsai-8B 用 llama-server を起動（先に実行しておく）
-lagent    # llama-server + Bonsai-8B で agent.py を起動（bllama が前提）
+ollama launch claude --model qwen3.6:35b-mlx
 ```
 
-> エイリアスは `~/.bash_profile` に登録済み（当初 `.zshrc` に設定していたが移行）。
-
-> **注意**: `lagent` だけで起動してもスキルは読み込まれない。スキルは起動時に `--skill` で指定する必要がある。チャット中に「スキルを読んで」と言っても、会話の文脈に読み込まれるだけでシステムプロンプトには反映されない。
+または手動設定:
 
 ```bash
-lagent --skill git_commit_push   # スキルを指定して起動
+export ANTHROPIC_BASE_URL=http://localhost:11434
+export ANTHROPIC_API_KEY=ollama
+claude --model qwen3.6:35b-mlx
 ```
 
-### 直接起動する場合
+### Python エージェント起動
 
 ```bash
 cd ~/projects/local_agent
 source .venv/bin/activate
 
-# デフォルト（Bonsai-8B + スキルなし）※llama-server が起動済みであること
+# デフォルトモデルで起動
 python3 scripts/agent.py
 
 # スキルを指定して起動
 python3 scripts/agent.py --skill tech_writing_ja
 
-# 利用可能なスキル一覧を確認
+# エージェント一覧を確認
 python3 scripts/agent.py --list-skills
 ```
 
+## 対応モデル・バックエンド
+
+### 64GB Mac 向け（推奨）
+
+| モデル | バックエンド | ツール呼び出し | 日本語品質 |
+|--------|------------|--------------|-----------|
+| `qwen3.6:35b-mlx`（35B MoE / 3B活性） | Ollama MLX | ◎ 安定・**最新推奨** | ◎ |
+| `gemma4:e2b`（31B Gemma系） | Ollama | ◎ 安定 | ◎ |
+| `qwen3.6:397b-cloud` | Ollama Cloud | △ | ○ |
+
+### 8GB Mac 向け（SML実験）
+
+| モデル | バックエンド | ツール呼び出し | 日本語品質 |
+|--------|------------|--------------|-----------|
+| `gemma4:e2b`（5.1GB） | Ollama | ◎ 安定 | ◎ |
+| `Bonsai-8B`（1.1GB） | llama-server | ○ 単発OK・連鎖は不安定 | ○ |
+| `qwen2.5:7b`（4.7GB） | Ollama | △ 不安定 | △ 中国語漏れあり |
+
+> 詳細な実験記録と環境別の推奨構成は [SML.md](SML.md) を参照。
+
+### MLXモデルについて
+
+Ollamaには2種類のモデル種別がある。`-mlx`と`-cloud`で動作が全く異なるので注意。
+
+| タグ | 実行場所 | 課金 |
+|------|---------|------|
+| `-mlx`（例: `qwen3.6:35b-mlx`） | **ローカル**（MLX / Apple Silicon最適化） | なし |
+| `-cloud`（例: `gemma4:31b-cloud`） | **クラウド API 経由** | **課金あり** |
+
+SIZEが`-`のモデルはローカルにファイルが存在せず、クラウドAPI経由で実行される。`ollama launch claude` で`-cloud`モデルを指定すると課金対象となるので注意。
+
 ## スキル機能
 
-スキルとは**LLMへの専門指示書**。システムプロンプトとして渡すことで以下が向上する：
+スキルとは**LLMへの専門指示書（Markdownファイル）**。システムプロンプトとして渡すことで、以下が向上する：
 - 回答のフォーマット・構造化
 - 言語制御（中国語漏れの防止等）
 - 過剰な回答の抑制
@@ -80,9 +129,9 @@ python3 scripts/agent.py --list-skills
 | `tech_writing_ja` | 技術文書を「一言・詳細・具体例・注意点」の構造で出力 |
 | `code_review` | 「重大な問題→改善提案→良い点→修正コード」の形式でレビュー |
 | `debug_helper` | エラーから「種類→原因→修正方法→確認手順」を提示 |
-| `commit_message` | diffから `feat/fix/refactor` 等のprefixつきメッセージを生成 |
+| `commit_message` | diffから `feat/fix/refactor` 等のprefixつきコミットメッセージを生成 |
 | `regex_explainer` | 正規表現を解説・生成・デバッグ。パーツ表・マッチ例つき |
-| `git_commit_push` | status→add→commit→push を全自動実行。メッセージも自動生成 |
+| `git_commit_push` | status→add→commit→push を全自動実行 |
 | `git_status` | git status を呼んで結果を表示（1ステップ専用） |
 | `git_add` | git add . → status 確認（1ステップ専用） |
 | `git_commit` | status 確認 → commit（メッセージ自動生成）（1ステップ専用） |
@@ -94,15 +143,7 @@ python3 scripts/agent.py --list-skills
 python3 examples/compare_skills.py <モデル名> <スキル名> "<質問>"
 
 # 例
-python3 examples/compare_skills.py gemma4:e2b tech_writing_ja "DNSとは何ですか"
-python3 examples/compare_skills.py gemma4:e2b code_review "以下をレビューして: def f(x): return eval(x)"
-```
-
-### 新しいスキルの作り方
-
-```bash
-cp skills/template.md skills/<新しいスキル名>.md
-# テンプレートを編集してタスク固有の指示を記述
+python3 examples/compare_skills.py qwen3.6:35b-mlx tech_writing_ja "DNSとは何ですか"
 ```
 
 ## ツール呼び出し機能
@@ -116,43 +157,6 @@ cp skills/template.md skills/<新しいスキル名>.md
 | `write_file` | ファイルの作成・上書き |
 | `calculate` | 数式計算 |
 | `run_git` | git操作（status/add/commit/push/diff/log/show） |
-
-```
-[あなた] このディレクトリのファイル一覧を見せて
-[あなた] test3.txtを作成してtestと書いて
-[あなた] git add . してfeat: テスト でコミットして
-[あなた] pushして
-```
-
-## 対応モデル・バックエンド
-
-| モデル | バックエンド | ツール呼び出し | 日本語品質 |
-|--------|------------|--------------|-----------|
-| `gemma4:e2b`（5.1GB） | Ollama | ◎ 安定・**推奨** | ◎ |
-| `qwen2.5:7b`（4.7GB） | Ollama | △ 不安定 | △ 中国語漏れあり |
-| `Bonsai-8B`（1.1GB） | llama-server | ○ 単発OK・連鎖は不安定 | ○ |
-
-### Ollamaで起動する場合
-
-```bash
-# Ollamaサーバーが起動していること
-ollama list
-
-# モデルを指定して起動
-OLLAMA_MODEL=gemma4:e2b python3 scripts/agent.py
-```
-
-### Bonsai（llama-server）で起動する場合
-
-```bash
-# llama-serverを起動
-cd ~/projects/1bit_LLM/bonsai-demo
-./scripts/start_llama_server.sh &
-
-# agent.pyをBonsaiに向ける
-cd ~/projects/local_agent
-OLLAMA_BASE_URL=http://localhost:8080/v1 OLLAMA_MODEL=bonsai-8b python3 scripts/agent.py
-```
 
 ## デバッグ
 

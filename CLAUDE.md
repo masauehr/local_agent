@@ -2,26 +2,56 @@
 
 ## プロジェクト概要
 
-ローカルLLM（Ollama / llama.cpp）に**スキル**（タスク特化のMarkdownファイル）を与えて、回答品質・フォーマット・言語制御を向上させる仕組みを実験・改善するプロジェクト。
+ローカルLLM（Ollama / llama.cpp / mlx_lm）に**スキル**（タスク特化のMarkdownファイル）を与えて、回答品質・フォーマット・言語制御を向上させる仕組みを実験・改善するプロジェクト。
 
 あわせて、ファイル操作・git操作を自然言語で実行できるツール呼び出し機能も実装・実験している。
 
+- 古い環境（MacBook Air 8GB）の実験記録: [SML.md](SML.md)
+- モデル比較・設定ガイド: [LLM.md](LLM.md)
+
 ## 技術スタック
 
-- **ローカルLLMサーバー**: Ollama v0.15以降 または llama-server（llama.cpp）
-- **推奨モデル**: `gemma4:e2b`（Ollama・ツール呼び出し安定）/ `Bonsai-8B`（llama-server・1.1GB超軽量）
+- **ローカルLLMサーバー**: Ollama v0.15以降（MLX対応） / llama-server（llama.cpp） / mlx_lm
+- **推奨モデル**: `qwen3.6:35b-mlx`（Ollama・MoE構造・35B総計/3B活性で高速推理）
 - **言語**: Python 3.10以上
 - **APIクライアント**: `openai` パッケージ（OpenAI互換）
 - **接続先**: Ollama `http://localhost:11434` / llama-server `http://localhost:8080`
+
+## MLXモデルについて（2026-05-22更新）
+
+Ollamaには2種類のモデル種別がある。`-mlx`と`-cloud`で動作が全く異なるので注意。
+
+| タグ | 実行場所 | 課金 | 説明 |
+|------|---------|------|------|
+| `-mlx`（例: `qwen3.6:35b-mlx`） | **ローカル**（MLX / Apple Silicon最適化） | なし | ローカルで推論。無料・最速 |
+| `-cloud`（例: `gemma4:31b-cloud`） | **クラウド API 経由** | **課金あり** | Ollamaがクラウドへ中継する |
+
+SIZEが`-`のモデルはローカルにファイルが存在せず、クラウドAPI経由で実行される。`ollama launch claude` で`-cloud`モデルを指定すると課金対象となるので注意。
+
+### 推奨コマンド
+
+```bash
+# Claude Code をOllama経由（MLXローカル実行・無料）で起動
+ollama launch claude --model qwen3.6:35b-mlx
+
+# または環境変数を直接設定
+export ANTHROPIC_BASE_URL=http://localhost:11434
+export ANTHROPIC_API_KEY=ollama
+claude --model qwen3.6:35b-mlx
+```
+
+### 動作確認方法
+
+Claude Code内で`/status`コマンドを実行し、ベースURLが`http://localhost:11434`になっていればOllama経由のローカル実行。`api.anthropic.com`であれば本番APIに接続され課金対象となる。
 
 ## ディレクトリ構成方針
 
 ```
 local_agent/
-├── scripts/        # エージェント本体・実行スクリプト（Pythonスネークケース）
-├── setup/          # セットアップ用シェルスクリプト
-├── examples/       # 動作確認・サンプルコード
-└── docs/           # 追加ドキュメント（必要に応じて）
+├── scripts/          # エージェント本体・実行スクリプト（Pythonスネークケース）
+├── setup/            # セットアップ用シェルスクリプト
+├── examples/         # 動作確認・サンプルコード
+└── docs/             # 追加ドキュメント（必要に応じて）
 ```
 
 ## コーディング規約
@@ -54,10 +84,13 @@ ollama serve
 # モデル一覧確認
 ollama list
 
-# Claude Codeをローカルに向ける
+# Claude Codeをローカル（MLX）に向ける（推奨）
+ollama launch claude --model qwen3.6:35b-mlx
+
+# 従来方法（環境変数を直接設定）
 export ANTHROPIC_BASE_URL=http://localhost:11434
 export ANTHROPIC_API_KEY=ollama
-claude --model qwen2.5-coder:7b
+claude --model qwen3.6:35b-mlx
 
 # Ollama API動作確認
 curl http://localhost:11434/api/tags
@@ -72,100 +105,37 @@ curl http://localhost:11434/api/tags
 
 ---
 
-## スキル（Skills）実験 — 追加経緯と現状
+## スキル（Skills）実験 — 概要
 
-### 背景
-shi3zblog の記事（ https://note.com/shi3zblog/n/nd5954b2b6b94 ）で言及された「スキル」概念を実装・検証するために追加。  
-スキル = **AI向け教科書（Markdownファイル）**。システムプロンプトとして渡すことで、低性能なローカルLLMでも特定タスクの精度を引き上げられるか試す実験。
+shi3zblog の記事で言及された「スキル」概念（AI向け専門指示書Markdownファイル）を実装・検証。
+スキル = **LLMへの専門指示書**。システムプロンプトとして渡すことで、回答のフォーマット・構造化・言語制御を向上できる。
 
-### このプロジェクトの位置づけ整理
-- **本来の local_agent の目的**: Claude Code CLI の裏側を Ollama に差し替えて動かす
-- **スキル実験（今回追加）**: 自作 Python CLI で Ollama を直接叩き、スキルありなしの効果を比較する
-- → 両者は独立。スキル実験は `scripts/agent.py` と `examples/compare_skills.py` で完結する
+- 詳細な実験記録: [SML.md](SML.md)（MacBook Air 8GBでの旧実験）
 
-### 追加されたファイル構成
-```
-local_agent/
-├── scripts/
-│   ├── agent.py          # --skill フラグ追加済み（スキルをシステムプロンプトに読み込む）
-│   └── skill_loader.py   # スキルファイル読み込みユーティリティ
-├── skills/
-│   ├── README.md         # スキルの書き方ガイド
-│   ├── template.md       # 新規スキル作成テンプレート
-│   ├── tech_writing_ja.md # 技術文書作成スキル（実用例）
-│   ├── code_review.md    # コードレビュースキル
-│   └── git_commit_push.md # git status→add→commit→push を全自動実行するスキル
-└── examples/
-    └── compare_skills.py  # スキルあり・なしの回答を並べて比較する実験スクリプト
-```
+## スキルの実装
 
-### 実験結果サマリー（2026-04-21）
+スキルは `scripts/agent.py` でシステムプロンプトとして読み込まれる。`--skill` フラグで特定のスキルファイルを指定できる。
 
-- スキルによってフォーマット・構造化・中国語漏れ抑制の効果を確認
-- `gemma4:e2b` がツール呼び出し・日本語品質ともに最も安定（実験当時）
-- `Bonsai-8B` を **現在のデフォルトモデルに設定済み**（llama-server / ポート8080）
-- `qwen2.5:7b` はシステムプロンプトで言語ルールを明示しないと中国語が混入する
-- `agent.py` に `write_file` / `list_files` / `run_git` ツールを追加済み
-- `<tool_call>` テキスト形式フォールバックパーサーを実装済み（モデル非依存）
-
-### git操作スキル実験（2026-04-22）
-
-#### 試みたこと
-- `git_commit_push` スキルを作成（status → add → commit → push の全自動フロー）
-- `lagent`（Bonsai-8B / llama-server）で「git関連のskillを読んで、pushまで全部やって」と指示
-
-#### 判明した問題と対処
-
-| 問題 | 原因 | 対処 |
-|------|------|------|
-| `push` 前に確認質問が出る | システムプロンプトに`push`の例がなかった | `agent.py` のシステムプロンプトに例を追記 |
-| `git add` がスキップされる | モデルがstepを省略する | スキルに「addをスキップ禁止」を明記・add後のstatus確認を追加 |
-| 「追加して」→ `read_file` が呼ばれる | `git add` と `read_file` の区別がつかない | システムプロンプトに `git add` の例を追記 |
-| ステップ上限（5回）でpush前に終了 | `run_turn` の上限が低すぎた | 上限を5→10に変更 |
-| `git add .` でなく個別ファイルだけaddされる | スキルの指示が弱い | 現在未解決 |
-
-#### 結果
-- Bonsai-8B（lagent）での「全自動push」は**現時点では不安定**
-- `list_files → status → add → status確認 → commit` まで動くが、pushに至らないことが多い
-- 多段ツール連鎖はモデル性能に強く依存する
-
-### git操作スキル追加実験（2026-04-23）
-
-#### 試みたこと
-- `agent.py` のデフォルトモデルを `gemma4:e2b` → `Bonsai-8B`（llama-server / ポート8080）に変更
-- スキルの大幅簡略化（68行→14行）で Bonsai-8B の指示理解を改善しようとした
-- `git_commit_push` を1ステップ専用スキル4つ（`git_status` / `git_add` / `git_commit` / `git_push`）に分割してテスト
-
-#### テスト結果まとめ
-
-| テスト | 条件 | 結果 |
-|---|---|---|
-| 全自動（スキル修正前） | `git_commit_push`（長文版） | 全操作を1コマンドにまとめて実行→全部捏造 |
-| 全自動（スキル修正後） | `git_commit_push`（`今すぐツール呼び出す`追記） | 各ステップ個別実行→成功（pushのみリモート未設定で失敗） |
-| 全自動（リモート設定後） | `git_commit_push`（簡略版） | 変更なしの状態で`log`のみ呼び、ステップ1〜5を捏造 |
-| 1ステップ専用スキル | `git_status` / `git_add` / `git_commit` | `git commit`を`-m`なしで呼んでタイムアウト |
-
-#### 結論
-- **Bonsai-8B での全自動 git 操作は実用レベルに達していない**
-- 1ビット量子化モデルは長い指示を読み飛ばし、ツールを呼ばずに架空の出力を捏造する傾向がある
-- 多段ツール連鎖は `gemma4:e2b` 等より高性能なモデルが必要
-- 1ステップ単純操作（`status` のみ等）なら動作するが、明示的な指示が必要
-
-### 次にやること
-- 他のモデル（`gemma4:e2b` 等）でツール呼び出し精度を比較
-- エージェントにチャット内容をマニュアルとして保存させる実験
-
-### 起動コマンド
 ```bash
-cd ~/projects/local_agent
-source .venv/bin/activate
-
-# デフォルト（Bonsai-8B）※事前に bllama でサーバー起動が必要
-python3 scripts/agent.py
-
-# スキルあり
+# スキルありで起動
 python3 scripts/agent.py --skill tech_writing_ja
 
-# モデル比較実験
-python3 examples/compare_skills.py gemma4:e2b tech_writing_ja "DNSとは何ですか"
+# スキル一覧
+python3 scripts/agent.py --list-skills
 ```
+
+## ツール呼び出し機能
+
+エージェントに自然言語で話しかけると、対応するツールが自動で呼び出される。
+
+- 追加済みのツール: `write_file` / `list_files` / `run_git`
+- フォールバック: `<tool_call>` テキスト形式パーサー（モデル非依存）
+
+## MLXモデルの活用（2026-05-22更新）
+
+MoE（Mixture of Experts）構造の `qwen3.6:35b-mlx` が最新推奨モデル。
+- 35B総パラメータのうち推論時は3Bのみ活性化 → 高速・軽量
+- `-mlx` タグでローカルMLX実行（無料・Apple Silicon最適化）
+- `ollama launch claude --model qwen3.6:35b-mlx` で起動
+
+詳細は [LLM.md](LLM.md) を参照。
