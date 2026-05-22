@@ -103,9 +103,9 @@ class Tetris:
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Tetris")
-        self.clock = pygame.Clock()
-        self.font = pygame.font.SysFont("japanfont", 28)
-        self.small_font = pygame.font.SysFont("japanfont", 20)
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        self.small_font = pygame.font.Font(None, 24)
         self.reset_game()
 
     def reset_game(self):
@@ -130,7 +130,7 @@ class Tetris:
         piece.shape = SHAPES[piece.piece_type][piece.rotation]
         self.next_piece = Piece(random.choice(PIECE_KEYS))
         # 生成不可能な場合はゲームオーバー
-        if not self.can_move(piece, piece.x, piece.y):
+        if not self.can_move(piece, 0, 0):
             self.game_over = True
         return piece
 
@@ -217,8 +217,6 @@ class Tetris:
         while self.can_move(piece, 0, ghost_y - piece.y + 1):
             ghost_y += 1
         if ghost_y != piece.y:
-            # 半透明のため、別色で表示
-            ghost_color_idx = (list(COLORS.values()).index(piece.color) + 1) % len(COLORS)
             for i, row in enumerate(piece.shape):
                 for j, cell in enumerate(row):
                     if cell:
@@ -292,13 +290,8 @@ class Tetris:
         # ゴースト描画
         self.draw_ghost()
 
-        # 現在ピース描画（硬ドロップ中のライン表示）
-        piece = self.current_piece
-        drop_dist = GRID_ROWS - 1 - piece.y
-        if drop_dist > 2:
-            self.draw_hard_drop_line()
-        else:
-            self.draw_piece(piece)
+        # 現在ピース描画
+        self.draw_piece(self.current_piece)
 
         # ライン消去アニメーション
         self.pieces_cleared_anims = self.hold_line_fade(pygame.time.get_ticks())
@@ -306,19 +299,6 @@ class Tetris:
         # サイドバー描画
         self.draw_next()
         self.draw_sidebar()
-
-        # ゲームオーバー表示
-        if self.game_over:
-            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            overlay.set_alpha(128)
-            overlay.fill((0, 0, 0))
-            self.screen.blit(overlay, (0, 0))
-            text = self.font.render("GAME OVER", True, COLORS["WHITE"])
-            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
-            self.screen.blit(text, rect)
-            restart_text = self.small_font.render("Press R to restart", True, COLORS["WHITE"])
-            r_rect = restart_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
-            self.screen.blit(restart_text, r_rect)
 
         # ポーズ表示
         if self.paused:
@@ -339,6 +319,12 @@ class Tetris:
         overlay.set_alpha(180)
         overlay.fill((0, 0, 0))
         self.screen.blit(overlay, (0, 0))
+        text = self.font.render("GAME OVER", True, COLORS["WHITE"])
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        self.screen.blit(text, rect)
+        restart_text = self.small_font.render("Press R to restart", True, COLORS["WHITE"])
+        r_rect = restart_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
+        self.screen.blit(restart_text, r_rect)
 
     def hard_drop(self):
         """瞬間落下"""
