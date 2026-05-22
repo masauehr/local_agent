@@ -228,7 +228,7 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 | **日本語文章の修正** | ◎ 期待できる | 未評価 | 未評価 |
 | **AIエージェント適性** | ❌ ツール非対応 | ✅ 十分 | ◎ より良い可能性 |
 | **速度** | ✅ 速い | ✅ 速い | 未評価 |
-| **Claude Code 使用** | ❌ ツール非対応 | ✅ 対応 | ✅ 対応（要アップデート） |
+| **Claude Code 使用** | ❌ ツール非対応 | ✅ 対応 | △ コード生成◎だがファイル書き出しでハング |
 
 #### 用途別推奨モデル
 
@@ -241,8 +241,11 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q8_0
 #### Claude Code（AIエージェント）での追加評価
 
 - **qwen3.6:35b-mlx**: コード修正に失敗する傾向あり、バグを解消できないケースがあった。論理的思考は向上しているが、コード生成能力は qwen3.5 からあまり改善していない印象
-- **gemma4:31b-mlx**: チャット評価ではコード生成が qwen より良い印象。Claude Code でのエージェント性能は Ollama アップデート後に要検証
-- gemma4:31b-mlx は Ollama 0.20.2 で `unsupported architecture` エラー → **Ollama アップデートが必要**
+- **gemma4:31b-mlx**（Ollama アップデート後に評価）:
+  - テトリスゲームの Python コードを生成 → **一応動くコードを生成できた** ✅
+  - `.py` ファイルや Jupyter Notebook への書き出し命令で **ハングアップ** ❌（ファイル書き込みツールの呼び出しが正しく動作しない）
+  - コードをチャット上で生成する能力は十分だが、Claude Code のツール（Write/Edit）との連携が不安定
+- gemma4:31b-mlx は Ollama 0.20.2 で `unsupported architecture` エラー → Ollama アップデートで解消
 - qwen3.6 / gemma4 はコンテキスト内に英語が混入する傾向あり（日本語チャット用途では気になる）
 - RakutenAI は論理推論・コード生成が弱く、Claude Code での利用不可（ツール非対応）
 
