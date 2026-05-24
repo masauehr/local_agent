@@ -164,3 +164,67 @@ python3 examples/compare_skills.py qwen3.6:35b-mlx tech_writing_ja "DNSとは何
 # ツール呼び出しの生出力を確認
 AGENT_DEBUG=1 python3 scripts/agent.py
 ```
+
+---
+
+## バッチ自動化パターン（`batch_call.py`）
+
+launchd などの自動化スクリプトからローカルLLMを呼び出すための汎用CLI。  
+Ollama の OpenAI互換エンドポイントを直接使用するため、**ラッパーサーバー不要**。
+
+### 基本的な使い方
+
+```bash
+# stdin から読み込み、stdout へ出力
+echo "市場分析してください" | python3 scripts/batch_call.py
+
+# ファイルから読み込み、ファイルへ出力
+python3 scripts/batch_call.py \
+    --model qwen3.6:27b-mlx \
+    --prompt-file prompt.txt \
+    --output result.md
+
+# システムプロンプトを追加
+cat prompt.txt | python3 scripts/batch_call.py \
+    --system "あなたは金融アドバイザーです" \
+    --model qwen3.6:35b-mlx
+```
+
+### 他プロジェクトのシェルスクリプトからの呼び出し
+
+```bash
+LOCAL_AGENT_DIR="/Users/masahiro/projects/local_agent"
+
+# レポート生成例（launchd スクリプト内）
+RESULT=$(python3 "$LOCAL_AGENT_DIR/scripts/batch_call.py" \
+    --model qwen3.6:27b-mlx \
+    --prompt-file "$PROMPT_FILE" \
+    --timeout 600 \
+    2>> "$LOG_FILE")
+echo "$RESULT" > output.md
+```
+
+### 採用プロジェクト
+
+| プロジェクト | 用途 | 採用日 |
+|------------|------|--------|
+| `rakuten_margin` | 週次信用取引推奨戦略の自動生成 | 2026-05-24 |
+
+### 設計方針
+
+- **ラッパーサーバー不要**: Ollama の `/v1/chat/completions`（OpenAI互換）を直接呼び出す
+- **標準入出力ベース**: Unix パイプと組み合わせやすい設計
+- **stderr にログ**: stdout は LLM の応答のみ（シェル変数への代入が容易）
+- **環境変数で設定変更**:
+  - `OLLAMA_BASE_URL`: エンドポイント変更（デフォルト: `http://localhost:11434`）
+  - `BATCH_LLM_MODEL`: デフォルトモデル変更（デフォルト: `qwen3.6:27b-mlx`）
+
+### `agent.py` との使い分け
+
+| | `agent.py` | `batch_call.py` |
+|-|------------|-----------------|
+| 実行形式 | 対話（REPL） | バッチ（単発） |
+| ツール呼び出し | ◎ | ✕ |
+| launchd 自動実行 | ✕ 不向き | ◎ |
+| ファイル操作 | LLM が自律実行 | シェルスクリプト側で制御 |
+| 用途 | 開発・探索 | 定型レポート生成・自動化 |
