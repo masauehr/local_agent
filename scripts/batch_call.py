@@ -26,6 +26,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Optional
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 DEFAULT_MODEL = os.environ.get("BATCH_LLM_MODEL", "qwen3.6:27b-mlx")
@@ -35,10 +36,16 @@ ENDPOINT = f"{OLLAMA_BASE_URL}/v1/chat/completions"
 def call_llm(
     prompt: str,
     model: str = DEFAULT_MODEL,
-    system: str | None = None,
+    system: Optional[str] = None,
     timeout: int = 600,
 ) -> str:
-    """ローカルLLMにプロンプトを送り、テキスト応答を返す。"""
+    """ローカルLLMにプロンプトを送り、テキスト応答を返す。
+
+    ストリーミングモードで呼び出す。これにより：
+    - HTTP レスポンスヘッダーが生成開始前に即座に届く（タイムアウト回避）
+    - timeout はトークン間の無音時間に適用される（生成全体ではない）
+    - 大きなプロンプトでも安定して動作する
+    """
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
@@ -47,6 +54,7 @@ def call_llm(
     body = json.dumps({
         "model": model,
         "messages": messages,
+        "stream": True,
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -54,10 +62,24 @@ def call_llm(
         data=body,
         headers={"Content-Type": "application/json"},
     )
+    chunks: list[str] = []
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
+        for raw_line in resp:
+            line = raw_line.decode("utf-8").strip()
+            if not line.startswith("data: "):
+                continue
+            payload = line[6:]  # "data: " を除去
+            if payload == "[DONE]":
+                break
+            try:
+                delta = json.loads(payload)["choices"][0]["delta"]
+                text = delta.get("content") or ""
+                if text:
+                    chunks.append(text)
+            except (json.JSONDecodeError, KeyError, IndexError):
+                continue
 
-    return data["choices"][0]["message"]["content"]
+    return "".join(chunks)
 
 
 def main() -> None:
