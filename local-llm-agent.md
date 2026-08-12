@@ -525,3 +525,14 @@ claude --model "$MODEL" --strict-mcp-config --tools Bash,Edit,Write,Read,WebSear
 ### ローカルモデルのgit push挙動について
 
 ローカルモデルに「ファイルを作ってpushして」と依頼したところ、`main`に直接pushせず**新規ブランチを作成してそこにpush**するという安全側の挙動を確認した（GitHubの「Compare & pull request」表示はこの新規ブランチpushに対する通常の案内であり、エラーではない）。ただし`main`へのマージ判断はしないため、テスト用ブランチは手動で確認・削除（`git branch -D`, `git push origin --delete`）する必要がある。
+
+#### Git運用ルールとブランチ運用
+
+本プロジェクトでは以下のGit運用ルールを守ること。
+
+- **既定ブランチ（main）への直接コミットは禁止**。作業は必ず機能ブランチで実施し、mainへはマージして反映する。
+- ファイルの追加・変更時は `git add → git commit → git push` の3ステップを必ず実行する。コミットメッセージ末尾には `Co-Authored-By: Claude <noreply@anthropic.com>` を付ける。
+- push前には必ずユーザーに確認を取る（破壊的操作防止）。
+- 2026-08-12時点の運用では、Claude Codeの安全ルールによりmainブランチ上での作業時は自動的に作業ブランチが作成される。運用簡略化が必要な場合はマニュアル記載どおりブランチを手動で管理する。
+
+この運用は `pc_docs/manuals/automation/local-llm-agent.md` と `~/projects/local_agent/CLAUDE.md` に記載のGitHub更新ルールに基づく。
