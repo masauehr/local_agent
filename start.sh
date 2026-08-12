@@ -32,7 +32,12 @@ export ANTHROPIC_API_KEY=ollama
 
 echo "[OK] モデル: $MODEL"
 echo "[OK] 接続先: $ANTHROPIC_BASE_URL"
+echo "[OK] --strict-mcp-config + ツール限定 でコンテキスト削減（CLAUDE.mdは読み込む）"
 echo ""
 
 # Claude Codeを起動
-claude --model "$MODEL"
+# CLAUDE.mdは読み込ませる（コーディング規約・ドキュメント更新ルール等の継続性のため）
+# --strict-mcp-config: MCPサーバー（Gmail/Calendar/Drive等）のツール一覧を読み込まない
+# --tools: Agent/Artifact等、説明文が長大なツールを除外し、基本ループ(読み書き・実行)
+#          ＋調べ物(WebSearch/WebFetch)＋進捗管理(TodoWrite)だけに絞る
+claude --model "$MODEL" --strict-mcp-config --tools Bash,Edit,Write,Read,WebSearch,WebFetch,TodoWrite
