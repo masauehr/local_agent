@@ -1,5 +1,5 @@
 """
-Pygame を使用したテトリスゲーム
+Pygame を使用したテトリスゲーム  qwen3.6 を Claude code で修正し機能追加
 """
 
 import pygame
