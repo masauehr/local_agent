@@ -332,3 +332,80 @@ ollama run hf.co/mmnga/RakutenAI-2.0-8x7B-instruct-gguf:Q4_K_M
 > qwen3.6 が現時点で最も操作感が良く、テトリスのコードも機能的に最も充実したものを生成した（壁蹴り・ゴースト・レベルシステム実装）。ただしバグが残り、複雑なコード修正タスクでは詰まる。
 > 日本語チャット用途では RakutenAI が突出して自然。コードを含む会話なら gemma4 が現実的。
 > devstral はコーディングエージェント特化を謳うが、ファイル操作の遅さで実用には至らなかった。
+
+---
+
+## 11. llm-jp-4-32b-a3b-thinking（2026-05-24〜25 作業中断）
+
+### モデル概要
+
+| 項目 | 内容 |
+|------|------|
+| モデル名 | `llm-jp/llm-jp-4-32b-a3b-thinking` |
+| 開発元 | 国立情報学研究所（NII）LLM-jp プロジェクト |
+| アーキテクチャ | qwen3moe（MoE 32B総計 / 3B活性） |
+| 特徴 | thinking モデル・日本語特化 |
+| GGUF配布元 | `hf.co/ash2813/llm-jp-4-32b-a3b-thinking-gguf` |
+| 量子化 | Q4_K_M（imatrix適用・約21GB） |
+| GGUFパス | `~/.ollama/models/blobs/sha256-ca8e85cb7cea...` |
+
+### Ollama では chat template が動作しない
+
+`ollama run` または Ollama の `/api/chat` でこのモデルを使うと、質問と無関係な回答が返ってくる。
+
+**原因:** Ollama がこのモデルの **Harmony chat template** を正しく処理できない。  
+`ollama show` で確認すると `capabilities: completion` のみ（`chat` なし）。
+
+### llama.cpp（llama-server）での起動が必要
+
+```bash
+# インストール
+brew install llama.cpp
+
+# 起動（--jinja と --alias が重要）
+llama-server \
+  -m ~/.ollama/models/blobs/sha256-ca8e85cb... \
+  --alias "llm-jp-4" \
+  --jinja \
+  --host 127.0.0.1 --port 8088 \
+  -c 16384 -t 8
+```
+
+- `--jinja`: Harmony chat template を正しく解釈するために必須
+- `--alias`: Cursor 等からのモデル一覧取得時に読みやすい名前を付ける
+- `-c 16384`: thinking モデルは内部推論で大量トークンを消費するため 4096 では不足
+- `reasoning_content` フィールドに思考過程が分離されて返る
+
+### 起動スクリプト・エイリアス
+
+```bash
+# スクリプト（起動済みチェック付き）
+~/projects/local_agent/scripts/start_llmjp4.sh
+
+# .zshrc エイリアス
+alias llmjp4='llama-cli -m "..." --jinja -c 16384 -t 8 --conversation'
+alias llmjp4-start='~/projects/local_agent/scripts/start_llmjp4.sh'
+alias llmjp4-stop='pkill -f "llama-server.*8088"'
+```
+
+### 動作確認済み
+
+- `llama-cli` でのインタラクティブチャット ✅
+- REST API（`http://127.0.0.1:8088/v1/chat/completions`）✅
+- 速度: 約 78〜86 tok/s（M4 Mac 64GB）✅
+- 日本語回答の品質: 高い ✅
+
+### Cursor 連携（未完了・作業中断）
+
+**目的:** Cursor のカスタムモデルとして llm-jp-4 を登録し、文章作成補助に使う。
+
+**問題:** Cursor の Settings → Models → Add Model ダイアログで `Override OpenAI Base URL` を設定しないと、デフォルト AI（Claude 等）が使われてしまう。llama-server のログにアクセスが来ない状態。
+
+**再開時の手順:**
+1. `llmjp4-start` でサーバー起動
+2. Cursor Settings → Models → `Override OpenAI Base URL` をON → `http://127.0.0.1:8088/v1` を入力
+3. `OpenAI API Key` をON → `dummy` を入力
+4. Add Model → モデル名フィールドに `llm-jp-4` のみ入力（Base URL はここには入れない）
+5. `Cmd+L` チャットまたは `Cmd+K` インライン編集でモデルを選択して使う
+
+**次のステップ:** Cursor 設定が難しければ **Continue.dev**（VSCode/Cursor 拡張）に切り替える。Continue は設定ファイルに JSON で書くだけで確実に動作する。
