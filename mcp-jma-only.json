@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "jma": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/Users/masahiro/projects/jma_mcp/server.py"],
+      "env": {}
+    }
+  }
+}

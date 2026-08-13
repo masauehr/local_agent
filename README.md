@@ -60,6 +60,12 @@ local_agent/
 ollama launch claude --model qwen3.6:35b-mlx
 ```
 
+または `start.sh`（**推奨**。MCPをjmaのみに絞り込み・Agent/Artifact等の長文ツール説明を除外し、巨大コンテキストによるタイムアウトを防ぐ設定込み）:
+
+```bash
+./start.sh qwen3.6:35b-mlx
+```
+
 または手動設定:
 
 ```bash
@@ -67,6 +73,8 @@ export ANTHROPIC_BASE_URL=http://localhost:11434
 export ANTHROPIC_API_KEY=ollama
 claude --model qwen3.6:35b-mlx
 ```
+
+> `start.sh` の詳細（`--strict-mcp-config` / `--tools` 絞り込みの理由）は [local-llm-agent.md](local-llm-agent.md) を参照。
 
 ### Python エージェント起動
 
@@ -92,7 +100,11 @@ python3 scripts/agent.py --list-skills
 |--------|------------|--------------|-----------|
 | `qwen3.6:35b-mlx`（35B MoE / 3B活性） | Ollama MLX | ◎ 安定・**最新推奨** | ◎ |
 | `gemma4:e2b`（31B Gemma系） | Ollama | ◎ 安定 | ◎ |
+| `muse-glimmer:30b-mlx`（32B Dense・nvfp4） | Ollama MLX | ◎ 対応 | ◎ |
+| `muse-glimmer:30b`（28B Dense・GGUF Q4_K_M） | Ollama GGUF/llama.cpp | ◎ 対応 | ◎ |
 | `qwen3.5:397b-cloud` | Ollama Cloud | △ | ○ |
+
+> `muse-glimmer`系はDense構造（全パラメータが毎トークン活性化）のため、MoE構造の`qwen3.6`より応答速度が明確に劣る。同じmuse-glimmerでもGGUF版の方がMLX版より速い場合がある（量子化形式・エンジン成熟度の差）。詳細な速度比較は [local-llm-agent.md](local-llm-agent.md) を参照。
 
 ### 8GB Mac 向け（SLM実験）
 

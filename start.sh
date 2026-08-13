@@ -30,14 +30,18 @@ fi
 export ANTHROPIC_BASE_URL=http://localhost:11434
 export ANTHROPIC_API_KEY=ollama
 
+MCP_CONFIG="$(dirname "$0")/mcp-jma-only.json"
+
 echo "[OK] モデル: $MODEL"
 echo "[OK] 接続先: $ANTHROPIC_BASE_URL"
-echo "[OK] --strict-mcp-config + ツール限定 でコンテキスト削減（CLAUDE.mdは読み込む）"
+echo "[OK] --strict-mcp-config(jmaのみ) + ツール限定 でコンテキスト削減（CLAUDE.mdは読み込む）"
 echo ""
 
 # Claude Codeを起動
 # CLAUDE.mdは読み込ませる（コーディング規約・ドキュメント更新ルール等の継続性のため）
-# --strict-mcp-config: MCPサーバー（Gmail/Calendar/Drive等）のツール一覧を読み込まない
+# --strict-mcp-config + --mcp-config: MCPはjmaサーバーのみ読み込み、
+#   Gmail/Calendar/Drive等の重いMCPツール一覧は除外
 # --tools: Agent/Artifact等、説明文が長大なツールを除外し、基本ループ(読み書き・実行)
 #          ＋調べ物(WebSearch/WebFetch)＋進捗管理(TodoWrite)だけに絞る
-claude --model "$MODEL" --strict-mcp-config --tools Bash,Edit,Write,Read,WebSearch,WebFetch,TodoWrite
+claude --model "$MODEL" --strict-mcp-config --mcp-config "$MCP_CONFIG" \
+    --tools Bash,Edit,Write,Read,WebSearch,WebFetch,TodoWrite

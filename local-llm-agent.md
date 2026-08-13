@@ -536,3 +536,37 @@ claude --model "$MODEL" --strict-mcp-config --tools Bash,Edit,Write,Read,WebSear
 - 2026-08-12時点の運用では、Claude Codeの安全ルールによりmainブランチ上での作業時は自動的に作業ブランチが作成される。運用簡略化が必要な場合はマニュアル記載どおりブランチを手動で管理する。
 
 この運用は `pc_docs/manuals/automation/local-llm-agent.md` と `~/projects/local_agent/CLAUDE.md` に記載のGitHub更新ルールに基づく。
+
+---
+
+## モデル別の応答速度比較（2026-08-13追記）
+
+同一マシン（64GB統合メモリ搭載Mac）上での実測で、応答速度は以下の順になった。
+
+**qwen3.6:35b-mlx（最速） ＞ muse-glimmer:30b（GGUF/llama.cpp版） ＞ muse-glimmer:30b-mlx（最遅）**
+
+`ollama show` で内部構造を比較すると、構造的な理由がはっきり見える。
+
+| モデル | アーキテクチャ | 総パラメータ | 埋め込み次元 | 量子化 |
+|---|---|---|---|---|
+| qwen3.6:35b-mlx | **qwen3_5_moe**（MoE） | 35.1B（実活性化は約3B） | **2048** | nvfp4 |
+| muse-glimmer:30b-mlx | muse_glimmer（**Dense**） | 32.3B（全パラメータ活性化） | **6656** | nvfp4 |
+| muse-glimmer:30b（GGUF） | muse-glimmer（**Dense**） | 27.9B（全パラメータ活性化） | **6656** | Q4_K_M |
+
+### ① qwen3.6が圧倒的に速い理由：MoE構造 × 小さい埋め込み次元
+
+- qwen3.6は**MoE**（Mixture of Experts）で、35Bのうち**実際に計算するのは約3B分だけ**。muse-glimmer系は**Dense**（全パラメータが毎トークン計算に参加）なので、名目上のパラメータ数（30B級 vs 35B）以上に、**実計算量は10倍近い差**がある。
+- さらに埋め込み次元（隠れ層の幅）がqwen3.6は2048、muse-glimmerは6656と**3倍以上**。Attention/FFN層の計算量はこの次元にほぼ比例〜二乗で効くため、これも大きく効いている。
+- 量子化(nvfp4)は両者共通のため、ここは差の要因ではない。
+
+### ② muse-glimmerの中でGGUF＞MLXだった理由
+
+同じDense構造・同程度パラメータ数のため①ほどの構造差はない。以下2点が要因と考えられる。
+
+- **量子化形式の違い**：GGUFは`Q4_K_M`（llama.cppで長年チューニングされてきた伝統的な量子化＋Metalカーネル）、MLX版は`nvfp4`（NVIDIA発の比較的新しい4bit形式）。nvfp4のMLX上でのカーネル実装がまだ成熟しておらず、逆量子化のオーバーヘッドが大きい可能性がある。
+- **エンジンの成熟度**：llama.cppのMetalバックエンドはApple Silicon向けプロンプト処理の最適化が長年蓄積されているのに対し、Ollamaの`mlx-engine`は比較的新しい統合で、プリフィル（プロンプト処理）のチューニングがまだ追いついていない可能性がある。
+
+### 結論・実用上の指針
+
+- **MoE構造のモデル（qwen3.6系）を優先的に使う**のが速度面で最も効果が大きい。Dense構造のモデル（muse-glimmer系）は名目パラメータ数が近くても実計算量が大きく、体感速度が大きく劣る。
+- 同じDenseモデルを使うなら、**GGUF（llama.cpp）版の方がMLX版より速い場合がある**。「MLX = Apple最適化だから常に速い」とは限らない点に注意。
