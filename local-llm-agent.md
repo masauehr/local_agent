@@ -620,3 +620,69 @@ level=ERROR source=routes.go:2684 msg="chat prompt error" error="system message 
 | `qwen3.6:35b-mlx` / `qwen3.6:27b-mlx` | ◎ エラー0件 | ◎ | 引き続き最有力 |
 | `qwen3.8:27b-mlx` | ❌ `system message`エラー多発 | 評価不能 | 現時点で見送り、Ollama側更新待ち |
 | `nemotron-3.5-lightning:30b-mlx` | ◎ エラー0件 | △ 5分タイムアウト頻発 | 互換性は良好・速度は要改善 |
+
+---
+
+## qwen3.8の`system message`エラー、原因確定と修正確認（2026-08-17追記）
+
+### 原因: Ollama側の既知バグだった
+
+Ollama公式のGitHubで、まさに同一の事象を報告したIssue/PRが見つかった。
+
+- **[Issue #17754](https://github.com/ollama/ollama/issues/17754)**: 「`qwen3.8:27b`で`500 system message must be at the beginning`が発生する」
+- **[PR #17757](https://github.com/ollama/ollama/pull/17757)**: Qwenレンダラーが非先頭のシステムメッセージ（会話途中に挿入されるsystemメッセージ）を処理できるよう修正。2026-08-14にマージ済み
+
+PRの説明によれば「コーディングクライアントが最初のユーザーターンの後に、実行時システムメッセージ（Claude Codeの`<system-reminder>`等に相当）を挿入した場合、以前はそれを拒否していた」とあり、当マニュアルで確認した「2ターン目以降で必ず失敗する」という挙動と完全に一致する。
+
+修正はバージョン`v0.32.14`（2026-08-15リリース）に含まれる。
+
+| バージョン | 日付 | 内容 |
+|---|---|---|
+| v0.32.12 | 8/14 | qwen3.8 27B対応追加（**バグ入りでリリース**） |
+| v0.32.13 | 8/14 | qwen3.8 developer instructions対応 |
+| **v0.32.14** | **8/15** | **`renderers/qwen: tolerate non-leading system messages` — このバグの修正** |
+
+### 注意: `brew upgrade`だけでは反映されない
+
+`brew upgrade ollama`でバイナリを更新しても、**既に起動中の`ollama serve`プロセス（`brew services`管理）はメモリ上の旧バージョンのまま動き続ける**ため、修正が反映されない。`ollama --version`の表示が新しくなっていても、実際にリクエストを処理しているサーバーのバージョンとは限らない点に注意。
+
+```bash
+# CLIバイナリのバージョン（更新されていても実態を反映しない場合がある）
+ollama --version
+
+# 稼働中サーバーの実バージョンを確認（こちらが実態）
+curl -s http://localhost:11434/api/version
+
+# 反映させるにはサービスごと再起動
+brew services restart ollama
+```
+
+`brew services restart ollama`後、`/api/version`が`0.32.14`を返すことを確認。その後Pi・Claude Codeの両方で複数ターンの会話を試したところ、`system message`エラーは再発しなかった。
+
+---
+
+## qwen3.8: Auto mode下での重いコーディングタスクに新たな課題（2026-08-17追記）
+
+`system message`バグ修正後、実際にコード生成タスク（マンデルブロ集合・テトリスの新規スクリプト作成）を試したところ、以下のエラーが**Pi・Claude Codeの両方で再現**した。
+
+```
+qwen3.8:27b-mlx is temporarily unavailable (timed out), so auto mode cannot determine the safety of Bash right now.
+```
+
+**原因**: Auto modeはBashコマンドを実行する前に「安全かどうか」をモデル自身に問い合わせて判定する。Ollamaのllama-serverは`-np 1`（同時1リクエストのみ）で動作するため、進行中の重いメイン生成（大きなプロンプトのプリフィル等）の後ろに安全性判定リクエストが並ぶ形になり、待ちきれずタイムアウトする。
+
+実測したプリフィル速度は**約100〜115 tok/s**。nemotron-3.5-lightningの約850〜1,080 tok/sと比べて1/8以下であり、`qwen3.8`が**Dense構造（27.78B全パラメータ活性化）**である以上、当マニュアル既出の知見（muse-glimmer比較: Dense構造はMoEより実計算量が桁違いに大きく遅い）とそのまま一致する。
+
+Pi・Claude Codeという独立した2つのハーネス双方で同一の現象が再現したことから、特定ツール固有の不具合ではなく、**qwen3.8のDense構造＋Ollamaの直列処理（`-np 1`）という構造的な制約**と判断できる。
+
+**ただし**、qwen3.8・nemotron-3.5-lightningのどちらも、**ファイル作成からGitHubへのpushまでの一連の操作自体は問題なく完走できることを確認した**。Auto modeの安全性判定タイムアウトは「少し待って再試行」すれば通ることが多く、致命的な機能不全ではない。
+
+### 2026-08-17時点の最終まとめ
+
+| モデル | 互換性 | プリフィル速度 | Auto mode下の実運用 | ファイル作成〜git push | 総合評価 |
+|---|---|---|---|---|---|
+| `qwen3.6:35b-mlx` / `qwen3.6:27b-mlx` | ◎ エラー0件 | ◎ | ◎ 問題なし | ◎ 問題なし | 引き続き最有力 |
+| `qwen3.8:27b-mlx` | ◎ v0.32.14で修正済み（要`brew services restart`） | △ 約100〜115 tok/s（Dense構造のため遅い） | △ 安全性判定タイムアウトが頻発（再試行で通る） | ◎ 問題なし | バグは解消したが速度面で本命には及ばない |
+| `nemotron-3.5-lightning:30b-mlx` | ◎ エラー0件 | ◎ 約850〜1,080 tok/s | △ 5分タイムアウトが頻発 | ◎ 問題なし | 互換性・プリフィルは良好だがデコード側に課題 |
+
+**総括**: `qwen3.6`系は今回の検証を通じても最も安定して実用的だった。`qwen3.8`はリリース直後の`system message`バグはv0.32.14で解消したが、Dense構造による処理速度の遅さがAuto mode運用時の障壁になっている。`nemotron-3.5-lightning`は互換性・プリフィル速度は優秀だが、デコード側のタイムアウトが引き続き課題。いずれのモデルも、ファイル作成・git pushという基本的なエージェントタスク自体は完走できており、致命的な機能欠如があるわけではない。

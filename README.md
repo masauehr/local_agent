@@ -102,12 +102,12 @@ python3 scripts/agent.py --list-skills
 | `gemma4:e2b`（31B Gemma系） | Ollama | ◎ 安定 | ◎ |
 | `muse-glimmer:30b-mlx`（32B Dense・nvfp4） | Ollama MLX | ◎ 対応 | ◎ |
 | `muse-glimmer:30b`（28B Dense・GGUF Q4_K_M） | Ollama GGUF/llama.cpp | ◎ 対応 | ◎ |
-| `qwen3.8:27b-mlx`（27.78B Dense） | Ollama MLX | ❌ `system message`エラー多発・**実用不可**（2026-08-16時点） | 未評価 |
+| `qwen3.8:27b-mlx`（27.78B Dense） | Ollama MLX | ○ `system message`バグはv0.32.14で修正済み・Auto mode下では速度面で要注意 | 未評価 |
 | `nemotron-3.5-lightning:30b-mlx`（30B MoE/3B活性） | Ollama MLX | ○ 互換性は良好だが5分タイムアウト頻発 | 未評価 |
 | `qwen3.5:397b-cloud` | Ollama Cloud | △ | ○ |
 
 > `muse-glimmer`系はDense構造（全パラメータが毎トークン活性化）のため、MoE構造の`qwen3.6`より応答速度が明確に劣る。同じmuse-glimmerでもGGUF版の方がMLX版より速い場合がある（量子化形式・エンジン成熟度の差）。詳細な速度比較は [local-llm-agent.md](local-llm-agent.md) を参照。
-> `qwen3.8`・`nemotron-3.5-lightning`は2026-08-16に導入検証を実施。qwen3.8はOllama側のチャットテンプレート未対応と見られる`system message must be at the beginning`エラーで実用不可、nemotronは互換性は良好だが応答速度（5分タイムアウト頻発）に課題あり。詳細は [local-llm-agent.md](local-llm-agent.md) を参照。
+> `qwen3.8`・`nemotron-3.5-lightning`は2026-08-16〜17に導入検証を実施。qwen3.8の`system message must be at the beginning`エラーはOllama側の既知バグ（[Issue #17754](https://github.com/ollama/ollama/issues/17754)）と判明し、v0.32.14で修正済み（`brew upgrade`後は`brew services restart ollama`が必要）。ただしqwen3.8はDense構造のためプリフィル速度が約100〜115 tok/sと遅く、Auto modeの安全性判定がタイムアウトしやすい。nemotronは互換性・プリフィル速度（約850〜1,080 tok/s）は良好だが、デコード側で5分タイムアウトが頻発。両モデルともファイル作成〜git pushの基本操作は問題なく完走。詳細は [local-llm-agent.md](local-llm-agent.md) を参照。
 
 ### 8GB Mac 向け（SLM実験）
 
