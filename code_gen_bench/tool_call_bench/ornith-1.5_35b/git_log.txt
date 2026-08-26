@@ -1,0 +1,10 @@
+ceca3c1dbc8dcaeb0634250cafa0bb307922a165 rle_decodeの2桁以上連続数を正しく復元するバグを修正
+
+連続数が2桁以上（例: "15a"）のときに1桁しか読まなかった問題を
+数字が続く限り読むように修正。
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
+880d6a51d4730555ccb6a6c3a61b388aa65c8546 initial: buggy rle_decode
+
+

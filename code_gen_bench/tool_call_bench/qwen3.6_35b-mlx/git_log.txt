@@ -1,0 +1,8 @@
+c8e4aa4b29acf0131b2c2c336ec1315dfc8ad510 fix: rle_decode() が2桁以上の連続数を正しく処理できないバグを修正
+
+1桁のみ読み取る int(s[i]) を、
+連続数字を読み取る isdigit() ループに変更。
+
+880d6a51d4730555ccb6a6c3a61b388aa65c8546 initial: buggy rle_decode
+
+

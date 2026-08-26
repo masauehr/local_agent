@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ローカルLLMコード生成対決</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg: #f5f6fa;
+    --bg-raised: #ffffff;
+    --bg-sunken: #eceef5;
+    --text: #1b2130;
+    --text-dim: #565f78;
+    --text-faint: #8a91a8;
+    --border: #dcdfec;
+    --accent: #3651c9;
+    --accent-soft: #e8ebfb;
+    --good: #1f8f5f;
+    --good-soft: #e3f5ec;
+    --bad: #c43f3f;
+    --bad-soft: #fbe9e9;
+    --warn: #a3730f;
+    --warn-soft: #f8ecd6;
+
+    --c-ornith: #5b5fd6;   --c-ornith-soft: #eaeafb;
+    --c-gemma: #1f8f83;    --c-gemma-soft: #e2f5f2;
+    --c-qwen36: #2f6fa5;   --c-qwen36-soft: #e3eef8;
+    --c-qwen38: #b3711f;   --c-qwen38-soft: #f8ecdc;
+    --c-nemotron: #a84f8f; --c-nemotron-soft: #f6e8f2;
+
+    --font-display: "Zen Kaku Gothic New", "Hiragino Sans", sans-serif;
+    --font-body: "BIZ UDPGothic", "Hiragino Sans", sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #14161f; --bg-raised: #1b1e2a; --bg-sunken: #10121a;
+      --text: #e7e9f5; --text-dim: #a5abc4; --text-faint: #6c7290;
+      --border: #2c3044; --accent: #8b9bff; --accent-soft: #232a4f;
+      --good: #5cd6a0; --good-soft: #16302a; --bad: #ef7272; --bad-soft: #3a1f22;
+      --warn: #e0b158; --warn-soft: #3a2e14;
+      --c-ornith: #9098f2; --c-ornith-soft: #23274a;
+      --c-gemma: #5fd1c3; --c-gemma-soft: #16302e;
+      --c-qwen36: #7fb1e0; --c-qwen36-soft: #1b2c3d;
+      --c-qwen38: #dba05a; --c-qwen38-soft: #382a16;
+      --c-nemotron: #dd8fc4; --c-nemotron-soft: #351f30;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #14161f; --bg-raised: #1b1e2a; --bg-sunken: #10121a;
+    --text: #e7e9f5; --text-dim: #a5abc4; --text-faint: #6c7290;
+    --border: #2c3044; --accent: #8b9bff; --accent-soft: #232a4f;
+    --good: #5cd6a0; --good-soft: #16302a; --bad: #ef7272; --bad-soft: #3a1f22;
+    --warn: #e0b158; --warn-soft: #3a2e14;
+    --c-ornith: #9098f2; --c-ornith-soft: #23274a;
+    --c-gemma: #5fd1c3; --c-gemma-soft: #16302e;
+    --c-qwen36: #7fb1e0; --c-qwen36-soft: #1b2c3d;
+    --c-qwen38: #dba05a; --c-qwen38-soft: #382a16;
+    --c-nemotron: #dd8fc4; --c-nemotron-soft: #351f30;
+  }
+
+  *{ box-sizing: border-box; }
+  body{ margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .wrap{ max-width: 1000px; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+
+  header{ display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2.25rem; margin-bottom: 2.75rem; border-bottom: 1px solid var(--border); }
+  .eyebrow{ font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1{ font-family: var(--font-display); font-weight: 900; font-size: clamp(1.9rem, 4.2vw, 2.7rem); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede{ font-size: 1.02rem; color: var(--text-dim); max-width: 66ch; margin: 0; }
+  .meta-row{ display: flex; flex-wrap: wrap; gap: 0.5rem 0.7rem; margin-top: 0.4rem; }
+  .meta-row span{ font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-faint); }
+
+  section{ margin-bottom: 3.4rem; }
+  .section-head{ display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 1.1rem; }
+  .section-num{ font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-faint); }
+  h2{ font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; margin: 0; letter-spacing: -0.005em; }
+  h3{ font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; margin: 0 0 0.6rem; }
+  .section-sub{ color: var(--text-dim); font-size: 0.94rem; max-width: 68ch; margin: 0.2rem 0 1.4rem; }
+
+  .legend{ display: flex; flex-wrap: wrap; gap: 0.55rem; margin: 1.4rem 0 0; }
+  .chip{ display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.75rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-raised); border: 1px solid var(--border); }
+  .dot{ width: 0.55rem; height: 0.55rem; border-radius: 50%; flex-shrink: 0; }
+  .dot.ornith{ background: var(--c-ornith); }
+  .dot.gemma{ background: var(--c-gemma); }
+  .dot.qwen36{ background: var(--c-qwen36); }
+  .dot.qwen38{ background: var(--c-qwen38); }
+  .dot.nemotron{ background: var(--c-nemotron); }
+
+  .kpi-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.9rem; }
+  .kpi-card{ background: var(--bg-raised); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.3rem; border-top: 3px solid var(--card-accent, var(--accent)); }
+  .kpi-card .name{ font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; color: var(--text); margin-bottom: 0.15rem; }
+  .kpi-card .sub{ font-size: 0.76rem; color: var(--text-faint); margin-bottom: 0.9rem; }
+  .kpi-line{ display: flex; justify-content: space-between; align-items: baseline; font-size: 0.82rem; color: var(--text-dim); padding: 0.28rem 0; border-top: 1px dashed var(--border); }
+  .kpi-line:first-of-type{ border-top: none; }
+  .kpi-line b{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+  .pass-badge{ font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; color: var(--good); }
+  .warn-badge{ font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; color: var(--warn); }
+  .bad-badge{ font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; color: var(--bad); }
+
+  .table-scroll{ overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table{ width: 100%; border-collapse: collapse; background: var(--bg-raised); font-size: 0.88rem; min-width: 640px; }
+  th, td{ padding: 0.7rem 0.9rem; text-align: left; border-bottom: 1px solid var(--border); }
+  thead th{ font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; background: var(--bg-sunken); }
+  tbody tr:last-child td{ border-bottom: none; }
+  td.num{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-dim); }
+  td.model-cell{ display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.83rem; }
+  .verdict{ display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 6px; }
+  .verdict.pass{ background: var(--good-soft); color: var(--good); }
+  .verdict.fail{ background: var(--bad-soft); color: var(--bad); }
+
+  .task-card{ background: var(--bg-raised); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem; margin-bottom: 1.1rem; }
+  .task-head{ display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
+  .task-tag{ font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.18rem 0.55rem; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .task-desc{ color: var(--text-dim); font-size: 0.9rem; margin: 0.3rem 0 1.1rem; }
+  .notes{ display: grid; gap: 0.55rem; }
+  .note-row{ display: grid; grid-template-columns: 160px 1fr; gap: 0.8rem; align-items: baseline; font-size: 0.87rem; padding: 0.5rem 0; border-top: 1px solid var(--border); }
+  .note-row:first-child{ border-top: none; padding-top: 0; }
+  .note-model{ display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; color: var(--text); }
+  .note-text{ color: var(--text-dim); }
+  .note-text code{ font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg-sunken); padding: 0.08rem 0.35rem; border-radius: 4px; color: var(--text); }
+  .note-text.bad{ color: var(--bad); }
+
+  .rec-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.9rem; }
+  .rec-card{ background: var(--bg-raised); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.35rem; }
+  .rec-card .use{ font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; }
+  .rec-card .pick{ display: inline-flex; align-items: center; gap: 0.45rem; font-family: var(--font-mono); font-weight: 600; font-size: 0.86rem; margin-bottom: 0.5rem; }
+  .rec-card p{ margin: 0; color: var(--text-dim); font-size: 0.87rem; }
+
+  .callout{ background: var(--accent-soft); border-radius: 12px; padding: 1.1rem 1.3rem; font-size: 0.9rem; color: var(--text); }
+  .callout b{ color: var(--accent); }
+  .callout.warn{ background: var(--warn-soft); }
+  .callout.warn b{ color: var(--warn); }
+
+  code.inline{ font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg-sunken); padding: 0.05rem 0.35rem; border-radius: 4px; color: var(--text); }
+
+  footer{ margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.78rem; font-family: var(--font-mono); }
+  footer a{ color: var(--text-faint); }
+
+  @media (max-width: 560px){ .note-row{ grid-template-columns: 1fr; gap: 0.2rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">Local LLM Benchmark · 2026-08-26</span>
+    <h1>ローカルLLM 5機種、コード生成とツール呼び出しで殴り合う</h1>
+    <p class="lede">
+      Ollamaでローカル実行中の5モデルに、易・中・難のコード生成課題と、
+      Claude Code経由での「バグ修正→テスト実行→git commit」という実践的なエージェントタスクの
+      両方を実際にやらせて比較した。ベンチマークの自己申告数値ではなく、手元のMacで動いた・動かなかったの一次情報。
+    </p>
+    <div class="meta-row">
+      <span>実行環境: Ollama v0.32.14 / Apple Silicon</span>
+      <span>コード生成検証: 生成コードをsubprocess実行 → exit code + 出力パターン照合</span>
+      <span>ツール呼び出し検証: claude -p --dangerously-skip-permissions を隔離gitリポジトリで実行</span>
+    </div>
+    <div class="legend">
+      <span class="chip"><span class="dot ornith"></span>ornith-1.5:35b</span>
+      <span class="chip"><span class="dot gemma"></span>gemma4:31b-mlx</span>
+      <span class="chip"><span class="dot qwen36"></span>qwen3.6:35b-mlx</span>
+      <span class="chip"><span class="dot qwen38"></span>qwen3.8:27b-mlx</span>
+      <span class="chip"><span class="dot nemotron"></span>nemotron-3.5-lightning:30b-mlx</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head"><span class="section-num">01</span><h2>結論サマリー</h2></div>
+    <p class="section-sub">コード生成単体では大差がつかなかった5モデルだが、Claude Code経由のエージェントタスクを通すと明確な差が出た。</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card" style="--card-accent: var(--c-ornith)">
+        <div class="name">ornith-1.5:35b</div>
+        <div class="sub">6時間前に導入した最新モデル</div>
+        <div class="kpi-line">コード生成 平均/課題 <b>26.1秒</b></div>
+        <div class="kpi-line">生成PASS <span class="pass-badge">3/3</span></div>
+        <div class="kpi-line">ツール呼び出し完走 <b>158.5秒</b></div>
+        <div class="kpi-line">エージェントタスク <span class="pass-badge">PASS</span></div>
+      </div>
+      <div class="kpi-card" style="--card-accent: var(--c-gemma)">
+        <div class="name">gemma4:31b-mlx</div>
+        <div class="sub">過去実験でも高評価</div>
+        <div class="kpi-line">コード生成 平均/課題 <b>81.4秒</b></div>
+        <div class="kpi-line">生成PASS <span class="pass-badge">3/3</span></div>
+        <div class="kpi-line">ツール呼び出し完走 <b>791.5秒</b></div>
+        <div class="kpi-line">エージェントタスク <span class="warn-badge">PASSだが遅い</span></div>
+      </div>
+      <div class="kpi-card" style="--card-accent: var(--c-qwen36)">
+        <div class="name">qwen3.6:35b-mlx</div>
+        <div class="sub">従来の推奨モデル</div>
+        <div class="kpi-line">コード生成 平均/課題 <b>88.9秒</b></div>
+        <div class="kpi-line">生成PASS <span class="warn-badge">2/3</span></div>
+        <div class="kpi-line">ツール呼び出し完走 <b>248.1秒</b></div>
+        <div class="kpi-line">エージェントタスク <span class="pass-badge">PASS</span></div>
+      </div>
+      <div class="kpi-card" style="--card-accent: var(--c-qwen38)">
+        <div class="name">qwen3.8:27b-mlx</div>
+        <div class="sub">Dense構造・単発生成は丁寧</div>
+        <div class="kpi-line">コード生成 平均/課題 <b>53.0秒</b></div>
+        <div class="kpi-line">生成PASS <span class="pass-badge">3/3</span></div>
+        <div class="kpi-line">ツール呼び出し完走 <b>タイムアウト(900秒)</b></div>
+        <div class="kpi-line">エージェントタスク <span class="bad-badge">FAIL</span></div>
+      </div>
+      <div class="kpi-card" style="--card-accent: var(--c-nemotron)">
+        <div class="name">nemotron-3.5-lightning:30b-mlx</div>
+        <div class="sub">MoE 30B/3B活性</div>
+        <div class="kpi-line">コード生成 平均/課題 <b>80.4秒</b></div>
+        <div class="kpi-line">生成PASS <span class="pass-badge">3/3</span></div>
+        <div class="kpi-line">ツール呼び出し完走 <b>291.5秒</b></div>
+        <div class="kpi-line">エージェントタスク <span class="pass-badge">PASS</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">02</span><h2>コード生成比較 — 易・中・難の3課題</h2></div>
+    <p class="section-sub">易＝ランレングス圧縮／中＝簡易Markdown→HTML変換／難＝ライフゲームCLI。3課題とも同一システムプロンプト・同一仕様書。生成コードは実際にsubprocess実行して判定。</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>モデル</th><th>課題</th><th>生成時間</th><th>コード行数</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td class="model-cell"><span class="dot ornith"></span>ornith-1.5:35b</td><td>易・RLE圧縮</td><td class="num">29.4秒<sup style="color:var(--bad)">†</sup></td><td class="num">53行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot ornith"></span>ornith-1.5:35b</td><td>中・MD→HTML</td><td class="num">24.7秒</td><td class="num">79行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot ornith"></span>ornith-1.5:35b</td><td>難・ライフゲーム</td><td class="num">24.1秒</td><td class="num">44行</td><td><span class="verdict pass">PASS</span></td></tr>
+
+          <tr><td class="model-cell"><span class="dot gemma"></span>gemma4:31b-mlx</td><td>易・RLE圧縮</td><td class="num">59.8秒</td><td class="num">64行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot gemma"></span>gemma4:31b-mlx</td><td>中・MD→HTML</td><td class="num">76.0秒</td><td class="num">76行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot gemma"></span>gemma4:31b-mlx</td><td>難・ライフゲーム</td><td class="num">108.4秒</td><td class="num">71行</td><td><span class="verdict pass">PASS</span></td></tr>
+
+          <tr><td class="model-cell"><span class="dot qwen36"></span>qwen3.6:35b-mlx</td><td>易・RLE圧縮</td><td class="num">59.8秒</td><td class="num">65行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen36"></span>qwen3.6:35b-mlx</td><td>中・MD→HTML</td><td class="num">130.7秒</td><td class="num">63行</td><td><span class="verdict fail">FAIL</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen36"></span>qwen3.6:35b-mlx</td><td>難・ライフゲーム</td><td class="num">76.1秒</td><td class="num">52行</td><td><span class="verdict pass">PASS</span></td></tr>
+
+          <tr><td class="model-cell"><span class="dot qwen38"></span>qwen3.8:27b-mlx</td><td>易・RLE圧縮</td><td class="num">39.6秒</td><td class="num">89行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen38"></span>qwen3.8:27b-mlx</td><td>中・MD→HTML</td><td class="num">51.6秒</td><td class="num">65行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen38"></span>qwen3.8:27b-mlx</td><td>難・ライフゲーム</td><td class="num">67.7秒</td><td class="num">84行</td><td><span class="verdict pass">PASS</span></td></tr>
+
+          <tr><td class="model-cell"><span class="dot nemotron"></span>nemotron-3.5-lightning</td><td>易・RLE圧縮</td><td class="num">70.1秒</td><td class="num">48行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot nemotron"></span>nemotron-3.5-lightning</td><td>中・MD→HTML</td><td class="num">95.0秒</td><td class="num">66行</td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot nemotron"></span>nemotron-3.5-lightning</td><td>難・ライフゲーム</td><td class="num">76.0秒<sup style="color:var(--bad)">‡</sup></td><td class="num">66行</td><td><span class="verdict pass">PASS</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-sub" style="margin-top:0.9rem; font-size:0.82rem;">
+      † ornith-1.5の初回生成はテスト部分の途中でストリームが打ち切られ未完成コードに終わった（再実行で完成、表内は再実行分の時間）。<br>
+      ‡ nemotronは <code class="inline">```python</code> を二重にネストして返す癖があり、単純な正規表現では空コードとして抽出されてしまった。抽出ロジックを補正して再取得。<br>
+      qwen3.6の中課題は <code class="inline">strippend</code>（<code class="inline">stripped</code>のタイポ）による<code class="inline">NameError</code>で実行不可＝FAIL。
+    </p>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">03</span><h2>Claude Code経由 ツール呼び出し安定性テスト</h2></div>
+    <p class="section-sub">
+      各モデルごとに独立した使い捨てgitリポジトリを用意し、あえてバグを仕込んだ<code class="inline">rle_decode()</code>を配置。
+      <code class="inline">claude -p --dangerously-skip-permissions --model &lt;model&gt;</code> でClaude Codeを非対話起動し、
+      「バグを直す→<code class="inline">python3</code>で実行確認→<code class="inline">git commit</code>」までを1発で任せた。
+      Read/Edit/Bashの複数ツールを連鎖させる、実運用に近いフルフロー。
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>モデル</th><th>所要時間</th><th>ターン数</th><th>commit</th><th>修正が正しく動くか</th></tr></thead>
+        <tbody>
+          <tr><td class="model-cell"><span class="dot ornith"></span>ornith-1.5:35b</td><td class="num">158.5秒</td><td class="num">8</td><td><span class="verdict pass">成功</span></td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot gemma"></span>gemma4:31b-mlx</td><td class="num">791.5秒（約13分）</td><td class="num">6</td><td><span class="verdict pass">成功</span></td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen36"></span>qwen3.6:35b-mlx</td><td class="num">248.1秒</td><td class="num">11</td><td><span class="verdict pass">成功</span></td><td><span class="verdict pass">PASS</span></td></tr>
+          <tr><td class="model-cell"><span class="dot qwen38"></span>qwen3.8:27b-mlx</td><td class="num">900秒（タイムアウト）</td><td class="num">—</td><td><span class="verdict fail">なし</span></td><td><span class="verdict fail">FAIL</span></td></tr>
+          <tr><td class="model-cell"><span class="dot nemotron"></span>nemotron-3.5-lightning</td><td class="num">291.5秒</td><td class="num">8</td><td><span class="verdict pass">成功</span></td><td><span class="verdict pass">PASS</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="task-card" style="margin-top:1.2rem;">
+      <h3>各モデルのコミットメッセージ</h3>
+      <div class="notes">
+        <div class="note-row"><div class="note-model"><span class="dot ornith"></span>ornith-1.5</div><div class="note-text"><code>rle_decodeの2桁以上連続数を正しく復元するバグを修正</code> — 本文に原因と修正方針も記述。もっとも丁寧なコミットメッセージ。</div></div>
+        <div class="note-row"><div class="note-model"><span class="dot qwen36"></span>qwen3.6</div><div class="note-text"><code>fix: rle_decode() が2桁以上の連続数を正しく処理できないバグを修正</code> — Conventional Commits風のprefixと修正内容の説明付き。ターン数は11と最多で、慎重に段階を踏んで直した様子。</div></div>
+        <div class="note-row"><div class="note-model"><span class="dot nemotron"></span>nemotron</div><div class="note-text"><code>rle_decode: 2桁以上の連続数に対応するバグ修正</code> — 簡潔な1行コミット。動作は問題なし。</div></div>
+        <div class="note-row"><div class="note-model"><span class="dot gemma"></span>gemma4</div><div class="note-text"><code>rle_decode 関数で2桁以上の連続数に対応するよう修正</code> — 修正自体は正しいが、13分という所要時間が実運用ではネック。</div></div>
+        <div class="note-row"><div class="note-model"><span class="dot qwen38"></span>qwen3.8</div><div class="note-text bad">15分間、コードは一切変更されずコミットも作られなかった。stdout/stderrともに出力なしのままタイムアウト。過去記録にある「Dense構造によるプリフィル速度の遅さ（約100〜115 tok/s）」がエージェントタスクでも足を引っ張る形で再現。</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">04</span><h2>総括</h2></div>
+    <div class="rec-grid">
+      <div class="rec-card">
+        <div class="use">生成速度・エージェント安定性ともに最有力</div>
+        <div class="pick"><span class="dot ornith"></span>ornith-1.5:35b</div>
+        <p>コード生成・ツール呼び出しの両テストで最速かつ完走。導入直後のモデルだが今回の実測ではもっともバランスが良い。</p>
+      </div>
+      <div class="rec-card">
+        <div class="use">実績重視・手堅い選択肢</div>
+        <div class="pick"><span class="dot nemotron"></span>nemotron-3.5-lightning</div>
+        <p>コード生成・エージェントタスクとも安定して完走。出力にコードブロック二重ネストの癖がある点だけ後処理側で要注意。</p>
+      </div>
+      <div class="rec-card">
+        <div class="use">従来の推奨モデルは今も通用するか</div>
+        <div class="pick"><span class="dot qwen36"></span>qwen3.6:35b-mlx</div>
+        <p>ツール呼び出しは安定して完走したが、単発コード生成でタイポによる実行時エラーを出した。エージェント用途は健在、単発生成の信頼性はやや後退。</p>
+      </div>
+      <div class="rec-card">
+        <div class="use">避けたほうがよい用途</div>
+        <div class="pick"><span class="dot qwen38"></span>qwen3.8:27b-mlx（エージェント用途）</div>
+        <p>単発コード生成は丁寧だが、Claude Code経由の複数ターンタスクは15分のタイムアウトで完走できず。Dense構造による低速が実運用の障壁になる、という過去の知見をそのまま裏付けた。</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:1.4rem;">
+      <b>コード生成単体の比較と、エージェントとしての比較は別物だった。</b>
+      qwen3.8はコード生成品質だけ見れば5モデル中トップクラスに丁寧だったが、Claude Code経由のマルチターンタスクでは唯一完走できなかった。
+      逆にornith-1.5は単発生成・エージェントタスクの両方で速く安定しており、「導入直後だから未知数」という以上の実力を見せた。
+      単一のベンチマーク軸だけでモデルを選ぶと、実運用で足をすくわれる好例。
+    </div>
+    <div class="callout warn" style="margin-top:0.9rem;">
+      <b>注意:</b> このページはPrivateリポジトリのGitHub Pagesとして公開されているが、Pagesの仕組み上URLを知っていれば誰でも閲覧可能。実験内容に機密情報は含まれていない前提で公開している。
+    </div>
+  </section>
+
+  <footer>
+    生成物・生ログ・自動検証スクリプト・ツール呼び出しテストの再現用リポジトリは
+    <a href="https://github.com/masauehr/local_agent/tree/main/code_gen_bench">code_gen_bench/</a>
+    に保存（prompts/ · results/ · logs/ · tool_call_bench/ · verify.py · run_bench.py · run_tool_bench.py）
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+[
+  {
+    "model": "ornith-1.5:35b",
+    "commit_made": true,
+    "test_passes": true,
+    "claude_exit": 0,
+    "elapsed": 158.51061415672302,
+    "error": null,
+    "num_turns": 8,
+    "duration_api_ms": 163950,
+    "is_error": false,
+    "commit_count": 2,
+    "test_stdout": "OK"
+  },
+  {
+    "model": "gemma4:31b-mlx",
+    "commit_made": true,
+    "test_passes": true,
+    "claude_exit": 0,
+    "elapsed": 791.4879829883575,
+    "error": null,
+    "num_turns": 6,
+    "duration_api_ms": 875532,
+    "is_error": false,
+    "commit_count": 2,
+    "test_stdout": "OK"
+  },
+  {
+    "model": "qwen3.6:35b-mlx",
+    "commit_made": true,
+    "test_passes": true,
+    "claude_exit": 0,
+    "elapsed": 248.1099669933319,
+    "error": null,
+    "num_turns": 11,
+    "duration_api_ms": 344868,
+    "is_error": false,
+    "commit_count": 2,
+    "test_stdout": "OK"
+  },
+  {
+    "model": "qwen3.8:27b-mlx",
+    "commit_made": false,
+    "test_passes": false,
+    "claude_exit": null,
+    "elapsed": 900,
+    "error": "timeout>900s",
+    "commit_count": 1,
+    "test_stdout": ""
+  },
+  {
+    "model": "nemotron-3.5-lightning:30b-mlx",
+    "commit_made": true,
+    "test_passes": true,
+    "claude_exit": 0,
+    "elapsed": 291.5048019886017,
+    "error": null,
+    "num_turns": 8,
+    "duration_api_ms": 417381,
+    "is_error": false,
+    "commit_count": 2,
+    "test_stdout": "OK"
+  }
+]
