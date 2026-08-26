@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ローカルLLMコード生成対決</title>
+<title>ローカルLLM実測比較</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
   :root{
@@ -146,7 +146,7 @@
 
   <header>
     <span class="eyebrow">Local LLM Benchmark · 2026-08-26</span>
-    <h1>ローカルLLM 5機種、コード生成とツール呼び出しで殴り合う</h1>
+    <h1>ローカルLLM 5機種、コード生成とツール呼び出しを実測比較</h1>
     <p class="lede">
       Ollamaでローカル実行中の5モデルに、易・中・難のコード生成課題と、
       Claude Code経由での「バグ修正→テスト実行→git commit」という実践的なエージェントタスクの
@@ -313,9 +313,6 @@
       qwen3.8はコード生成品質だけ見れば5モデル中トップクラスに丁寧だったが、Claude Code経由のマルチターンタスクでは唯一完走できなかった。
       逆にornith-1.5は単発生成・エージェントタスクの両方で速く安定しており、「導入直後だから未知数」という以上の実力を見せた。
       単一のベンチマーク軸だけでモデルを選ぶと、実運用で足をすくわれる好例。
-    </div>
-    <div class="callout warn" style="margin-top:0.9rem;">
-      <b>注意:</b> このページはPrivateリポジトリのGitHub Pagesとして公開されているが、Pagesの仕組み上URLを知っていれば誰でも閲覧可能。実験内容に機密情報は含まれていない前提で公開している。
     </div>
   </section>
 
