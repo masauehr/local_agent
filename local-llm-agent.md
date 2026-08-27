@@ -730,3 +730,64 @@ Pi・Claude Codeという独立した2つのハーネス双方で同一の現象
 | `qwen3.8:27b` | ◎ 最も詳細 | データ矛盾を自ら検知・注記。中国語・韓国語の単語が1〜2箇所混入 |
 | `nemotron-3.5-lightning:30b` | ○ 情報量少なめ | 最速（168秒）。**stock_analysisはこれをフォールバックに採用** |
 | `qwen3.6:27b-mlx` | △ 可読性低い | 数値を漢数字化・専門用語をカタカナ音写化（「PER」→「パー」等）し実用上読みにくい |
+
+---
+
+## コード生成 × ツール呼び出しの実測比較を公開（2026-08-26追記）
+
+`code_gen_bench/` の結果を1枚のページにまとめて GitHub Pages で公開した。
+
+**<https://masauehr.github.io/local_agent/>** — 「ローカルLLM実測比較」（`docs/index.html`、GitHub Pages は `docs/` を配信）
+
+対象は `ornith-1.5:35b` / `gemma4:31b-mlx` / `qwen3.6:35b-mlx` / `qwen3.8:27b-mlx` / `nemotron-3.5-lightning:30b-mlx` の5機種。
+易・中・難のコード生成課題（生成物を subprocess 実行して判定）と、Claude Code 経由の
+「バグ修正 → テスト実行 → git commit」エージェントタスクの両方を実測した。ページ掲載の主な数値:
+
+| 指標 | ornith-1.5:35b | nemotron-3.5-lightning:30b-mlx | qwen3.6:35b-mlx |
+|---|---|---|---|
+| コード生成 平均時間 | **26.1秒（最速、qwen3.6の約3倍速）** | 80.4秒 | 88.9秒 |
+| コード生成 PASS率 | 3/3 | 3/3 | 単発でタイポ由来の実行時エラーあり |
+| ツール呼び出しエージェント 完走時間 | **158.5秒（最速）** | 291.5秒 | 完走（安定） |
+| エージェントタスク | PASS（8ターン） | PASS（8ターン） | PASS |
+| 総括での位置付け | 「生成速度・エージェント安定性ともに最有力」 | 「実績重視・手堅い選択肢」（コードブロック二重ネストの癖に後処理側で注意） | エージェント用途は健在、単発生成の信頼性はやや後退 |
+
+要点は callout の一文「**コード生成単体の比較と、エージェントとしての比較は別物だった**」。
+`qwen3.8:27b-mlx` はコード生成品質だけなら上位だが、Claude Code 経由のマルチターンは15分タイムアウトで唯一未完走（Dense構造の低速という既出知見どおり）。
+
+再現用リポジトリ: [code_gen_bench/](https://github.com/masauehr/local_agent/tree/main/code_gen_bench)（`prompts/` `results/` `logs/` `tool_call_bench/` `verify.py` `run_bench.py` `run_tool_bench.py`）
+
+---
+
+## weather_digest / ai_news でのツール呼び出しエージェント実運用（2026-08-28追記）
+
+上記の実測比較を踏まえ、`ornith-1.5:35b` と `nemotron-3.5-lightning:30b-mlx` を、**Claude Code / Pi を介さず
+Ollama の `/api/chat` tool-calling を直接回すループ**（各プロジェクト固有の `local_agent.py`）で
+週次まとめ記事を生成するエージェントとして2つの本番自動化に組み込んだ。
+
+| プロジェクト | 位置付け | 保存先 | launchd 実行時刻（日/曜） |
+|---|---|---|---|
+| `weather_digest` | secondary エンジン（`local_agent.py --slug ornith / nemotron`）。qwen3.6・Claude Haiku と合わせて4モデル比較、Claude Sonnet が評価ページを自動生成 | `articles/ornith_weekly/` `articles/nemotron_weekly/` | 日曜 ornith 09:30 / nemotron 10:30（qwen 08:00・Haiku 12:00 の間） |
+| `ai_news` | variant サブモデル（`local_agent.py --variant ornith / nemotron`）。README・index 更新と月次生成は行わず記事生成と push のみ | `articles/weekly_ornith_2/` `articles/weekly_nemotron/` | 土曜 ornith 10:00 / nemotron 11:00 |
+
+どちらも「自分の記事ファイルと専用アーカイブ一覧だけを更新し、README・トップ index は触らない」設計。
+
+### weather_digest 先行テスト実行の結果（2026-08-28、週 `0828`）
+
+launchd の初回稼働（次の日曜）を待たず `run_weather_ornith.sh` / `run_weather_nemotron.sh` を手動実行:
+
+| モデル | 生成記事 | サイズ | トピック数 | 所要（ターン数） | 結果 |
+|---|---|---|---|---|---|
+| `ornith-1.5:35b` | `articles/ornith_weekly/2026-0828.md` | 約9.6 KB | 7 | 約2分（12ターン） | 記事生成〜git push まで完走 |
+| `nemotron-3.5-lightning:30b-mlx` | `articles/nemotron_weekly/2026-0828.md` | 約4.0 KB | 8 | 約3分（16ターン） | 記事生成〜git push まで完走 |
+
+- **Auto mode のデコード5分タイムアウトは発生しなかった。** 本節冒頭のとおりこの用途は Claude Code の Auto mode を経由せず、安全性判定リクエストがメイン生成に割り込む `-np 1` 直列待ちが起きないため、2026-08-16 検証で `nemotron` に見られた「デコード5分タイムアウト頻発」はこの構成では再現しない。
+- `nemotron` は公開ページ・過去節の所見どおり `ornith` より情報量が少なめで、今回の出力では出典 URL に実在しない形式（`https://news.web.nhk/...` 等）が数件混じっていた。weather_digest 側では比較ページ＋Sonnet 評価で可視化される想定。
+- ai_news 側にも同週（`2026-0828`）の ornith / nemotron 記事が生成済み。
+
+### 用途別の使い分け（本マニュアルの整理の更新）
+
+| 用途 | 推奨 | 根拠 |
+|---|---|---|
+| Claude Code / Pi 経由でツール呼び出しをさせる（Auto mode） | `qwen3.6` 系（MoE軽量） | `-np 1` 直列処理下で Dense 低速モデルは安全性判定タイムアウトが頻発（既出） |
+| 各プロジェクト固有の tool-calling ループを直接回す（Auto mode なし） | `qwen3.6` / `ornith-1.5` / `nemotron-3.5-lightning` いずれも実用 | weather_digest / ai_news で記事生成〜push まで完走を確認（本節） |
+| 大きなコンテキストを渡して1回で生成させる（ツール呼び出しなし） | Dense 含め選択肢が広い（`gemma4` `muse-glimmer` `qwen3.8` 等） | stock_analysis の検証（前節） |

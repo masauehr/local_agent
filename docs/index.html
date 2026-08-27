@@ -314,6 +314,15 @@
       逆にornith-1.5は単発生成・エージェントタスクの両方で速く安定しており、「導入直後だから未知数」という以上の実力を見せた。
       単一のベンチマーク軸だけでモデルを選ぶと、実運用で足をすくわれる好例。
     </div>
+
+    <div class="callout" style="margin-top:1rem;">
+      <b>その後（2026-08-28）：ornith-1.5 と nemotron-3.5-lightning を本番自動化に投入。</b>
+      Claude Codeを介さずOllamaのtool-callingループを直接回す方式で、<code>weather_digest</code>（気象ニュース週次まとめ・4モデル比較）と
+      <code>ai_news</code>（AIニュース週次まとめ）の記事生成エージェントに採用した。
+      weather_digestの先行テスト（週0828）では ornith が約2分・12ターン、nemotron が約3分・16ターンで記事生成〜git pushまで完走。
+      この方式はAuto modeの安全性判定リクエストが割り込まないため、2026-08-16検証でnemotronに見られた「デコード5分タイムアウト」は再現しなかった。
+      詳細は <a href="https://github.com/masauehr/local_agent/blob/main/local-llm-agent.md">local-llm-agent.md</a> の該当節を参照。
+    </div>
   </section>
 
   <footer>

@@ -3,6 +3,8 @@
 ローカルLLM（Ollama / llama.cpp / mlx_lm）にスキルを与えて、タスク特化型AIエージェントを構築・実験するプロジェクト。
 
 > 詳しい仕組み・実験結果・トラブルシューティングは [local-llm-agent.md](local-llm-agent.md) を参照。
+> モデル実測比較（コード生成 × ツール呼び出し）の公開ページ:
+> **<https://masauehr.github.io/local_agent/>**（「ローカルLLM実測比較」2026-08-26）
 
 ## プロジェクトの目的
 
@@ -18,6 +20,7 @@
 | [LLM.md](LLM.md) | ローカルLLM調査まとめ（Mac / Apple Silicon / 64GB向け） |
 | [SLM.md](SLM.md) | 小サイズモデル実験記録（MacBook Air 8GB / Bonsai-8B等） |
 | [local-llm-agent.md](local-llm-agent.md) | 詳細マニュアル・操作手順・トラブルシューティング |
+| [公開ページ: ローカルLLM実測比較](https://masauehr.github.io/local_agent/) | 5機種のコード生成 × Claude Code経由ツール呼び出しを実測比較（2026-08-26）。再現用リポジトリは [code_gen_bench/](https://github.com/masauehr/local_agent/tree/main/code_gen_bench) |
 
 ## ディレクトリ構成
 
@@ -107,7 +110,18 @@ python3 scripts/agent.py --list-skills
 | `qwen3.5:397b-cloud` | Ollama Cloud | △ | ○ |
 
 > `muse-glimmer`系はDense構造（全パラメータが毎トークン活性化）のため、MoE構造の`qwen3.6`より応答速度が明確に劣る。同じmuse-glimmerでもGGUF版の方がMLX版より速い場合がある（量子化形式・エンジン成熟度の差）。詳細な速度比較は [local-llm-agent.md](local-llm-agent.md) を参照。
-> `qwen3.8`・`nemotron-3.5-lightning`は2026-08-16〜17に導入検証を実施。qwen3.8の`system message must be at the beginning`エラーはOllama側の既知バグ（[Issue #17754](https://github.com/ollama/ollama/issues/17754)）と判明し、v0.32.14で修正済み（`brew upgrade`後は`brew services restart ollama`が必要）。ただしqwen3.8はDense構造のためプリフィル速度が約100〜115 tok/sと遅く、Auto modeの安全性判定がタイムアウトしやすい。nemotronは互換性・プリフィル速度（約850〜1,080 tok/s）は良好だが、デコード側で5分タイムアウトが頻発。両モデルともファイル作成〜git pushの基本操作は問題なく完走。詳細は [local-llm-agent.md](local-llm-agent.md) を参照。
+> `qwen3.8`・`nemotron-3.5-lightning`は2026-08-16〜17に導入検証を実施。qwen3.8の`system message must be at the beginning`エラーはOllama側の既知バグ（[Issue #17754](https://github.com/ollama/ollama/issues/17754)）と判明し、v0.32.14で修正済み（`brew upgrade`後は`brew services restart ollama`が必要）。ただしqwen3.8はDense構造のためプリフィル速度が約100〜115 tok/sと遅く、Auto modeの安全性判定がタイムアウトしやすい。nemotronは互換性・プリフィル速度（約850〜1,080 tok/s）は良好だが、Claude Code の Auto mode 下ではデコード側で5分タイムアウトが頻発。両モデルともファイル作成〜git pushの基本操作は問題なく完走。詳細は [local-llm-agent.md](local-llm-agent.md) を参照。
+
+### 実運用での採用・検証
+
+`ornith-1.5:35b` と `nemotron-3.5-lightning:30b-mlx` は、Ollama の tool-calling ループ（Claude Code を介さない、各プロジェクト固有の `local_agent.py`）で週次ダイジェスト記事を生成するエージェントとして2つの本番自動化に投入済み。
+
+| プロジェクト | 用途 | 実行 | 追加日 |
+|------------|------|------|--------|
+| `weather_digest` | 気象ニュース週次まとめ生成（qwen3.6 / Haiku と4モデル比較・Sonnet評価） | 日曜 ornith 09:30 / nemotron 10:30 | 2026-08-28 |
+| `ai_news` | AIニュース週次まとめ生成（`--variant` で比較サブモデル化） | 土曜 ornith 10:00 / nemotron 11:00 | 2026-08 |
+
+いずれも「secondary/variant エンジン」として、自分の記事ファイルと専用アーカイブ一覧だけを更新し、README・トップ index は触らない設計。`weather_digest` の先行テスト実行（2026-08-28、週 `0828`）では ornith が約2分（12ターン）、nemotron が約3分（16ターン）で**記事生成〜git push まで完走**した。`local-llm-agent.md` の該当節（2026-08-28追記）に詳細と公開ページからの引用あり。
 
 ### 8GB Mac 向け（SLM実験）
 
