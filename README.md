@@ -21,6 +21,8 @@
 | [SLM.md](SLM.md) | 小サイズモデル実験記録（MacBook Air 8GB / Bonsai-8B等） |
 | [local-llm-agent.md](local-llm-agent.md) | 詳細マニュアル・操作手順・トラブルシューティング |
 | [公開ページ: ローカルLLM実測比較](https://masauehr.github.io/local_agent/) | 5機種のコード生成 × Claude Code経由ツール呼び出しを実測比較（2026-08-26）。再現用リポジトリは [code_gen_bench/](https://github.com/masauehr/local_agent/tree/main/code_gen_bench) |
+| [tmp_ornith-1.5_memo.md](tmp_ornith-1.5_memo.md) | 調査メモ: Ornith-1.5（自己足場構築型コーディングLLM）の系譜・エージェント連携方法（一時メモ、2026-08-26） |
+| [apple_fm_cli_memo.md](apple_fm_cli_memo.md) | 調査メモ: macOS 27 `fm` CLI（Apple on-device Foundation Model）の仕様・知識精度・Ollama/Claude Code連携可否（2026-09-22） |
 
 ## ディレクトリ構成
 
